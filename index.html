@@ -47,7 +47,7 @@ html[data-theme="light"]{
 html[data-theme="light"] .btn-primary{background:var(--mint); border-color:var(--mint); color:var(--mint-ink);}
 html[data-theme="light"] .btn-primary:hover{filter:brightness(1.08);}
 html[data-theme="light"] input:focus, html[data-theme="light"] select:focus, html[data-theme="light"] textarea:focus{border-color:var(--mint);}
-*{box-sizing:border-box; margin:0; padding:0;}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
 html,body{height:100%; overflow:hidden;} /* solo #mainContent scorre: vedi nota sotto */
 body{
   background:var(--bg); color:var(--text);
@@ -256,6 +256,8 @@ main{margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%; padding:
 
 /* ---------- TIME SELECTOR (pills + tiles) ---------- */
 .time-selector{display:flex; flex-direction:column; gap:12px; background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); margin-bottom:20px;}
+.search-advanced-toggle{display:none;}
+.search-advanced-body{display:flex; flex-direction:column; gap:12px;}
 .time-selector-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
 .time-selector-label{font-size:10.5px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; width:72px; flex-shrink:0;}
 .amount-range-group{display:flex; align-items:center; gap:8px; margin-left:8px;}
@@ -311,9 +313,20 @@ main{margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%; padding:
   .mov-year-body .table-scroll{overflow-x:visible;}
   .mov-table thead{display:none;}
   .mov-table, .mov-table tbody{display:block; width:100%;}
-  .mov-table tr.group-row{display:flex; align-items:center; gap:8px; padding:9px 2px;}
+  /* Intestazione di mese ("AGOSTO 2026"): da riga di testo nuda a chip separatore leggibile */
+  .mov-table tr.group-row{display:flex; align-items:center; gap:8px; padding:8px 12px; margin:14px 0 8px; background:var(--surface-2); border-radius:10px;}
+  .mov-table tr.group-row:first-child{margin-top:2px;}
   .mov-table tr.group-row td{border:none !important; padding:0 !important; background:transparent !important; position:static !important; box-shadow:none !important; width:auto;}
-  .mov-table tr[data-id]{display:flex; flex-wrap:wrap; align-items:center; column-gap:8px; row-gap:3px; padding:10px 4px; border-bottom:1px solid var(--border-soft); white-space:normal; cursor:pointer;}
+  .mov-table tr.group-row td[colspan]{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim);}
+  /* Ogni movimento diventa una "card" autonoma invece di una riga di tabella nuda:
+     più respiro, gerarchia visiva chiara, coerente con lo stile del resto dell'app mobile. */
+  .mov-table tr[data-id]{
+    display:flex; flex-wrap:wrap; align-items:center; column-gap:10px; row-gap:4px;
+    background:var(--surface); border:1px solid var(--border-soft); border-radius:14px;
+    padding:12px 14px; margin-bottom:8px; box-shadow:0 1px 2px rgba(0,0,0,.03);
+    white-space:normal; cursor:pointer; transition:border-color .15s;
+  }
+  .mov-table tr[data-id].row-expanded{border-color:var(--mint);}
   .mov-table tr[data-id] td{padding:0 !important; border:none !important; background:transparent !important; position:static !important; box-shadow:none !important; white-space:normal; width:auto;}
   /* Su mobile mostriamo di default solo Data, Categoria, Dettaglio e Importo. Checkbox, icona
      metodo pagamento, Note, etichette e pulsanti modifica/elimina restano nascosti finché la riga
@@ -321,16 +334,61 @@ main{margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%; padding:
   .mov-table tr[data-id] .check-col, .mov-table tr[data-id] .src-col, .mov-table tr[data-id] td.note-col, .mov-table tr[data-id] td:last-child{display:none;}
   .mov-table tr[data-id].row-expanded .check-col{display:block; order:1; flex-shrink:0;}
   .mov-table tr[data-id].row-expanded .src-col{display:block; order:2; flex-shrink:0;}
-  .mov-table tr[data-id] td:nth-child(3){order:3; flex-shrink:0;}
-  .mov-table td.num.pos{order:4; margin-left:auto; border-left:none;}
-  .mov-table td.num.neg{order:5; margin-left:auto; border-left:none;}
-  .mov-table tr[data-id] td:nth-child(4){order:6; flex-basis:100%;}
-  .mov-table .desc-cell:not(.note-col){order:7; flex:1; min-width:0; font-size:13px;}
+  .mov-table tr[data-id] td:nth-child(3){order:1; flex-shrink:0; font-size:11px; font-weight:600; color:var(--text-faint); letter-spacing:.02em;}
+  .mov-table td.num.pos{order:2; margin-left:auto; border-left:none; font-size:15px; font-weight:800;}
+  .mov-table td.num.neg{order:2; margin-left:auto; border-left:none; font-size:15px; font-weight:800;}
+  .mov-table tr[data-id] td:nth-child(4){order:3; flex-basis:100%;}
+  .mov-table tr[data-id] td:nth-child(4) .tag{gap:6px;}
+  .mov-table .desc-cell:not(.note-col){order:4; flex:1; min-width:0; font-size:14.5px; font-weight:700; color:var(--text); text-transform:none; letter-spacing:0;}
   .mov-table tr[data-id] .etichette-row{display:none;}
-  .mov-table tr[data-id].row-expanded .etichette-row{display:inline-flex;}
-  .mov-table tr[data-id].row-expanded td.note-col{display:block; order:9; flex-basis:100%; color:var(--text-faint); font-size:12.5px;}
+  .mov-table tr[data-id].row-expanded .etichette-row{display:inline-flex; order:5; flex-basis:100%;}
+  .mov-table tr[data-id].row-expanded td.note-col{display:block; order:9; flex-basis:100%; color:var(--text-faint); font-size:12.5px; padding-top:6px !important; border-top:1px solid var(--border-soft); margin-top:2px;}
   .mov-table tr[data-id].row-expanded td:last-child{display:block; order:10; flex-basis:100%; margin-top:4px;}
   .mov-table tr[data-id].row-expanded td:last-child .row-actions{justify-content:flex-end;}
+  /* Checkbox più leggibili su touch (sostituiscono il quadratino nativo poco curato) */
+  .sel-check input[type="checkbox"]{
+    appearance:none; -webkit-appearance:none; width:19px; height:19px; border-radius:6px;
+    border:1.5px solid var(--border); background:var(--surface); position:relative; flex-shrink:0;
+  }
+  .sel-check input[type="checkbox"]:checked{background:var(--mint); border-color:var(--mint);}
+  .sel-check input[type="checkbox"]:checked::after{
+    content:''; position:absolute; left:6px; top:2px; width:5px; height:10px;
+    border:solid var(--mint-ink); border-width:0 2px 2px 0; transform:rotate(45deg);
+  }
+  /* ---------- Risultati Ricerca: stesso trattamento "a card" dei Movimenti, niente scroll
+     orizzontale, azioni (vai/modifica/elimina) nascoste finché la riga non viene toccata ---------- */
+  #searchResults .table-scroll{overflow-x:visible;}
+  .search-res-table thead{display:none;}
+  .search-res-table, .search-res-table tbody{display:block; width:100%;}
+  .search-res-table tr[data-id]{
+    display:flex; flex-wrap:wrap; align-items:center; column-gap:10px; row-gap:4px;
+    background:var(--surface); border:1px solid var(--border-soft); border-radius:14px;
+    padding:12px 14px; margin-bottom:8px; box-shadow:0 1px 2px rgba(0,0,0,.03);
+    cursor:pointer; transition:border-color .15s; white-space:normal;
+  }
+  .search-res-table tr[data-id].row-expanded{border-color:var(--mint);}
+  .search-res-table tr[data-id] td{padding:0 !important; border:none !important; background:transparent !important; position:static !important; box-shadow:none !important; white-space:normal; width:auto;}
+  .search-res-table tr[data-id] .check-col{display:none;}
+  .search-res-table tr[data-id].row-expanded .check-col{display:block; order:-2; flex-shrink:0;}
+  .search-res-table tr[data-id] td:last-child{display:none;}
+  .search-res-table tr[data-id].row-expanded td:last-child{display:block; order:99; flex-basis:100%; margin-top:4px;}
+  .search-res-table tr[data-id].row-expanded td:last-child .row-actions{justify-content:flex-end;}
+  .search-res-table .num{font-size:15px; font-weight:800; order:2; margin-left:auto;}
+  .search-res-table td:nth-child(2) .src-badge{margin-right:6px;}
+  /* Movimenti: check, src(icona metodo), Data, Categoria, Dettaglio, Importo, azioni */
+  .search-res-mov tr[data-id] .src-col{display:none;}
+  .search-res-mov tr[data-id].row-expanded .src-col{display:block; order:-1; flex-shrink:0;}
+  .search-res-mov tr[data-id] td:nth-child(3){order:1; flex-shrink:0; font-size:11px; font-weight:600; color:var(--text-faint);}
+  .search-res-mov tr[data-id] td:nth-child(4){order:3; flex-basis:100%;}
+  .search-res-mov tr[data-id] td:nth-child(5){order:4; flex:1; min-width:0; font-size:14.5px; font-weight:700; color:var(--text);}
+  /* Abbonamenti: check, Servizio, Metodo, Scadenza, Costo, azioni */
+  .search-res-sub tr[data-id] td:nth-child(4){order:1; flex-shrink:0; font-size:11px; font-weight:600; color:var(--text-faint);}
+  .search-res-sub tr[data-id] td:nth-child(2){order:3; flex-basis:100%; font-size:14.5px; font-weight:700; color:var(--text);}
+  .search-res-sub tr[data-id] td:nth-child(3){order:4; flex-basis:100%; font-size:12px; color:var(--text-faint);}
+  /* Manutenzione Auto: check, Data, Intervento, Officina, Costo, azioni */
+  .search-res-auto tr[data-id] td:nth-child(2){order:1; flex-shrink:0; font-size:11px; font-weight:600; color:var(--text-faint);}
+  .search-res-auto tr[data-id] td:nth-child(3){order:3; flex-basis:100%; font-size:14.5px; font-weight:700; color:var(--text);}
+  .search-res-auto tr[data-id] td:nth-child(4){order:4; flex-basis:100%; font-size:12px; color:var(--text-faint);}
 }
 @keyframes rowFlash{ 0%{background:var(--mint-dim);} 100%{background:transparent;} }
 tr.row-flash{ animation:rowFlash 5s ease-out; }
@@ -542,6 +600,11 @@ html[data-theme="light"] .import-min-badge{color:#0B3A2E;}
 .theme-toggle-row{display:flex; align-items:center; justify-content:space-between; padding:6px 0; flex-wrap:wrap; gap:12px;}
 .accent-swatch-row{display:flex; gap:9px; flex-wrap:wrap; justify-content:flex-end;}
 .accent-swatch{width:27px; height:27px; border-radius:50%; border:2px solid transparent; padding:0; cursor:pointer; position:relative; box-shadow:0 1px 3px rgba(0,0,0,.35); transition:transform .15s ease, border-color .15s ease;}
+.accent-swatch-current{width:27px; height:27px; border-radius:50%; border:2px solid var(--border-soft); padding:0; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .15s ease;}
+.accent-swatch-current:hover{transform:scale(1.12);}
+.settings-info-btn{width:24px; height:24px; flex-shrink:0; border-radius:50%; border:none; background:var(--surface-2); color:var(--text-faint); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s;}
+.settings-info-btn:hover{background:var(--surface-3); color:var(--text-dim);}
+.settings-info-btn svg{width:14px; height:14px;}
 .accent-swatch:hover{transform:scale(1.12);}
 .accent-swatch.active{border-color:var(--text);}
 .accent-swatch.active::after{content:"✓"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.55);}
@@ -785,8 +848,39 @@ th.src-col, td.src-col{width:26px; text-align:center; padding-left:0; padding-ri
   .kpi-grid{grid-template-columns:1fr 1fr;}
   .field-row{grid-template-columns:1fr;}
   .month-grid{grid-template-columns:repeat(6,1fr); max-width:none;}
-  .time-selector-label{width:auto;}
   .time-reset-btn{margin-left:0;}
+  /* ---------- Filtri Anni/Mesi (Dashboard + Ricerca): redesign minimale mobile ---------- */
+  .time-selector{border:1px solid var(--border-soft); box-shadow:none; border-radius:16px; padding:16px; gap:18px;}
+  .time-selector-row{gap:8px;}
+  .time-selector-label{font-size:10px; letter-spacing:.06em; width:auto;}
+  .pill{border:none; background:var(--surface-2); color:var(--text-dim); padding:9px 16px; font-size:12.5px; font-weight:700; flex-shrink:0;}
+  .pill.active{background:var(--mint); color:var(--mint-ink); box-shadow:none;}
+  .month-tile{border:none; background:var(--surface-2); padding:10px 2px; border-radius:11px; font-weight:700;}
+  .month-tile.active{background:var(--mint); color:var(--mint-ink); box-shadow:none;}
+  /* Riga "Anni": non va più a capo. Gli anni scorrono in orizzontale in una sola riga,
+     i pulsanti (selezione multipla / reset) restano ancorati alla fine della riga stessa:
+     zero rischio di sovrapposizioni o spazi vuoti, qualunque sia il numero di anni disponibili. */
+  .time-selector-row:first-child{flex-wrap:nowrap; align-items:center;}
+  .time-selector-row:first-child .pill-group{
+    flex:1; min-width:0; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+  }
+  .time-selector-row:first-child .pill-group::-webkit-scrollbar{display:none;}
+  #btnMultiToggle, #btnSearchMultiToggle, #btnResetSearchFilters{
+    flex-shrink:0; margin:0 !important; border:none; background:var(--surface-2);
+  }
+  #btnMultiToggle, #btnSearchMultiToggle{width:32px; height:32px;}
+  #btnResetSearchFilters{height:32px; padding:0 12px; font-size:11px; border-radius:9px; display:flex; align-items:center; gap:4px;}
+  #btnResetSearchFilters svg{width:13px; height:13px;}
+  .icon-toggle-btn.active{background:var(--mint-dim); color:var(--mint);}
+  /* "Ricerca avanzata": comprime Tipo/Metodo/Importo/Etichette dietro un tasto, solo mobile */
+  .search-advanced-toggle{
+    display:flex; align-items:center; gap:8px; width:100%; background:var(--surface-2);
+    border:none; border-radius:11px; padding:11px 14px; font-size:12.5px; font-weight:700;
+    color:var(--text-dim); cursor:pointer;
+  }
+  .search-advanced-body{max-height:0; overflow:hidden; gap:0; transition:max-height .3s ease;}
+  .search-advanced-wrap.open .search-advanced-toggle .cm-chevron{transform:rotate(90deg);}
+  .search-advanced-wrap.open .search-advanced-body{max-height:900px; gap:12px; margin-top:12px;}
   /* fix overflow totali anno nella scheda Movimenti */
   .mov-year-head{flex-wrap:wrap; row-gap:4px;}
   .mov-year-totals{margin-left:0; width:100%; justify-content:flex-end; font-size:11.5px; gap:10px;}
@@ -1210,7 +1304,8 @@ const ICONS = {
   helpCircle:'<circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line>',
   activity:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>',
   sparkle:'<path d="M12 2l1.8 5.8L20 9l-6.2 1.2L12 16l-1.8-5.8L4 9l6.2-1.2z"></path>',
-  road:'<line x1="4" y1="4" x2="4" y2="20"></line><line x1="20" y1="4" x2="20" y2="20"></line><line x1="12" y1="4" x2="12" y2="7"></line><line x1="12" y1="10.5" x2="12" y2="13.5"></line><line x1="12" y1="17" x2="12" y2="20"></line>'
+  road:'<line x1="4" y1="4" x2="4" y2="20"></line><line x1="20" y1="4" x2="20" y2="20"></line><line x1="12" y1="4" x2="12" y2="7"></line><line x1="12" y1="10.5" x2="12" y2="13.5"></line><line x1="12" y1="17" x2="12" y2="20"></line>',
+  info:'<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>'
 };
 function ico(name, size){
   size = size || 15;
@@ -4431,38 +4526,46 @@ function renderRicercaSearchBody(){
         </div>
       </div>
       <div class="time-selector-row">
-        <span class="time-selector-label">Tipo</span>
-        <div class="pill-group" id="searchTipoPills">
-          <button type="button" class="pill ${searchFilter.tipo==='tutti'?'active':''}" data-tipo="tutti">Tutti</button>
-          <button type="button" class="pill ${searchFilter.tipo==='entrata'?'active':''}" data-tipo="entrata">Solo Entrate</button>
-          <button type="button" class="pill ${searchFilter.tipo==='uscita'?'active':''}" data-tipo="uscita">Solo Uscite</button>
-        </div>
-      </div>
-      <div class="time-selector-row">
-        <span class="time-selector-label">Metodo</span>
-        <select id="searchMetodo" style="max-width:220px;">
-          <option value="tutti">Tutti i metodi</option>
-          ${DB.metodiPagamento.map(m=>`<option value="${esc(m)}" ${searchFilter.metodo===m?'selected':''}>${esc(m)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="time-selector-row">
-        <span class="time-selector-label">Importo</span>
-        <div class="amount-range-group">
-          <input type="number" step="0.01" id="searchMin" placeholder="Da € (min)" value="${searchFilter.min}" style="max-width:140px;">
-          <span style="color:var(--text-faint);">—</span>
-          <input type="number" step="0.01" id="searchMax" placeholder="A € (max)" value="${searchFilter.max}" style="max-width:140px;">
-        </div>
-      </div>
-      <div class="time-selector-row">
         <span class="time-selector-label">Testo</span>
         <input type="text" id="searchTesto" placeholder="Cerca in Dettaglio / Categoria…" value="${esc(searchFilter.testo)}" style="flex:1;min-width:200px;">
         <input type="text" id="searchNote" placeholder="Cerca nelle Note…" value="${esc(searchFilter.note)}" style="flex:1;min-width:200px;">
       </div>
-      <div class="time-selector-row">
-        <span class="time-selector-label">Etichette</span>
-        <div class="tag-input-wrap" style="flex:1;min-width:220px;">
-          <div class="tag-chips" id="searchEtichetteChips"></div>
-          <input type="text" id="searchEtichetteInput" list="etichetteDatalist" placeholder="Filtra per etichetta…">
+
+      <div class="search-advanced-wrap" id="searchAdvancedWrap">
+        <button type="button" class="search-advanced-toggle" id="searchAdvancedToggle">
+          <span class="cm-chevron">▶</span> Ricerca avanzata
+        </button>
+        <div class="search-advanced-body" id="searchAdvancedBody">
+          <div class="time-selector-row">
+            <span class="time-selector-label">Tipo</span>
+            <div class="pill-group" id="searchTipoPills">
+              <button type="button" class="pill ${searchFilter.tipo==='tutti'?'active':''}" data-tipo="tutti">Tutti</button>
+              <button type="button" class="pill ${searchFilter.tipo==='entrata'?'active':''}" data-tipo="entrata">Solo Entrate</button>
+              <button type="button" class="pill ${searchFilter.tipo==='uscita'?'active':''}" data-tipo="uscita">Solo Uscite</button>
+            </div>
+          </div>
+          <div class="time-selector-row">
+            <span class="time-selector-label">Metodo</span>
+            <select id="searchMetodo" style="max-width:220px;">
+              <option value="tutti">Tutti i metodi</option>
+              ${DB.metodiPagamento.map(m=>`<option value="${esc(m)}" ${searchFilter.metodo===m?'selected':''}>${esc(m)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="time-selector-row">
+            <span class="time-selector-label">Importo</span>
+            <div class="amount-range-group">
+              <input type="number" step="0.01" id="searchMin" placeholder="Da € (min)" value="${searchFilter.min}" style="max-width:140px;">
+              <span style="color:var(--text-faint);">—</span>
+              <input type="number" step="0.01" id="searchMax" placeholder="A € (max)" value="${searchFilter.max}" style="max-width:140px;">
+            </div>
+          </div>
+          <div class="time-selector-row">
+            <span class="time-selector-label">Etichette</span>
+            <div class="tag-input-wrap" style="flex:1;min-width:220px;">
+              <div class="tag-chips" id="searchEtichetteChips"></div>
+              <input type="text" id="searchEtichetteInput" list="etichetteDatalist" placeholder="Filtra per etichetta…">
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -4470,6 +4573,9 @@ function renderRicercaSearchBody(){
     <div id="searchStats"></div>
     <div id="searchResults"></div>
   `;
+  document.getElementById('searchAdvancedToggle').onclick = ()=>{
+    document.getElementById('searchAdvancedWrap').classList.toggle('open');
+  };
   el.querySelectorAll('#searchYearPills .pill').forEach(p=>{
     p.onclick = ()=>{
       const y = p.dataset.year;
@@ -4829,7 +4935,7 @@ function doSearch(keepSelection){
   let html = '';
 
   if(movMatches.length){
-    html += `<div class="section-label">Movimenti (${movMatches.length})</div><div class="card list-card"><div class="table-scroll"><table>
+    html += `<div class="section-label">Movimenti (${movMatches.length})</div><div class="card list-card"><div class="table-scroll"><table class="search-res-table search-res-mov">
       <thead><tr><th class="check-col"></th><th class="src-col"></th><th>Data</th><th>Categoria</th><th>Dettaglio</th><th class="num">Importo</th><th></th></tr></thead><tbody>`;
     movMatches.slice(0,150).forEach(m=>{
       const fonteIcon = movimentoMetodoIconHtml(m);
@@ -4850,7 +4956,7 @@ function doSearch(keepSelection){
     html += `</tbody></table></div></div>`;
   }
   if(subMatches.length){
-    html += `<div class="section-label">Abbonamenti (${subMatches.length})</div><div class="card list-card"><div class="table-scroll"><table>
+    html += `<div class="section-label">Abbonamenti (${subMatches.length})</div><div class="card list-card"><div class="table-scroll"><table class="search-res-table search-res-sub">
       <thead><tr><th class="check-col"></th><th>Servizio</th><th>Metodo</th><th>Scadenza</th><th class="num">Costo</th><th></th></tr></thead><tbody>`;
     subMatches.forEach(a=>{
       html += `<tr data-id="${a.id}">
@@ -4868,7 +4974,7 @@ function doSearch(keepSelection){
     html += `</tbody></table></div></div>`;
   }
   if(autoMatches.length){
-    html += `<div class="section-label">Manutenzione Auto (${autoMatches.length})</div><div class="card list-card"><div class="table-scroll"><table>
+    html += `<div class="section-label">Manutenzione Auto (${autoMatches.length})</div><div class="card list-card"><div class="table-scroll"><table class="search-res-table search-res-auto">
       <thead><tr><th class="check-col"></th><th>Data</th><th>Intervento</th><th>Officina</th><th class="num">Costo</th><th></th></tr></thead><tbody>`;
     autoMatches.forEach(x=>{
       html += `<tr data-id="${x.id}">
@@ -4889,6 +4995,12 @@ function doSearch(keepSelection){
   wireSearchRowActions();
 }
 function wireSearchRowActions(){
+  document.querySelectorAll('#searchResults .search-res-table tr[data-id]').forEach(row=>{
+    row.onclick = (e)=>{
+      if(e.target.closest('.sel-check, .row-actions, .etichetta-chip-click, [data-src-history]')) return;
+      row.classList.toggle('row-expanded');
+    };
+  });
   document.querySelectorAll('.searchCheck').forEach(cb=>cb.onchange = ()=>{
     const key = cb.dataset.key;
     if(cb.checked) searchSelected.add(key); else searchSelected.delete(key);
@@ -6807,87 +6919,108 @@ function renderImpostazioni(){
     <div class="card settings-section">
       <div class="card-title">Aspetto &amp; Privacy</div>
       <div class="theme-toggle-row">
-        <div><div style="font-weight:600;font-size:13.5px;">Tema Scuro</div><div class="page-sub" style="font-size:12px;">Passa da Light Mode a Dark Mode</div></div>
+        <div><div style="font-weight:600;font-size:13.5px;">Tema Scuro</div></div>
         <div class="switch ${isDark?'on':''}" id="themeSwitch"></div>
       </div>
       <div class="theme-toggle-row" style="border-top:1px solid var(--border-soft); margin-top:8px; padding-top:14px;">
-        <div><div style="font-weight:600;font-size:13.5px;">Colore interfaccia</div><div class="page-sub" style="font-size:12px;">Il colore principale dell'interfaccia — pulsanti, evidenziazioni e grafici</div></div>
-        <div class="accent-swatch-row" id="accentSwatchRow">
-          ${Object.keys(ACCENT_PALETTE).map(k=>`<button type="button" class="accent-swatch ${currentAccent()===k?'active':''}" data-accent="${k}" title="${ACCENT_PALETTE[k].label}" aria-label="${ACCENT_PALETTE[k].label}" style="background:${ACCENT_PALETTE[k].swatch};"></button>`).join('')}
-        </div>
+        <div><div style="font-weight:600;font-size:13.5px;">Colore interfaccia</div></div>
+        <button type="button" class="accent-swatch-current" id="accentSwatchCurrent" style="background:${ACCENT_PALETTE[currentAccent()].swatch};" title="Cambia colore interfaccia" aria-label="Cambia colore interfaccia"></button>
+      </div>
+      <div class="accent-swatch-row" id="accentSwatchRow" style="display:none; margin-top:10px;">
+        ${Object.keys(ACCENT_PALETTE).map(k=>`<button type="button" class="accent-swatch ${currentAccent()===k?'active':''}" data-accent="${k}" title="${ACCENT_PALETTE[k].label}" aria-label="${ACCENT_PALETTE[k].label}" style="background:${ACCENT_PALETTE[k].swatch};"></button>`).join('')}
       </div>
       <div class="theme-toggle-row" style="border-top:1px solid var(--border-soft); margin-top:8px; padding-top:14px;">
-        <div><div style="font-weight:600;font-size:13.5px;">Modalità Privacy ${ico('eyeOff')}</div><div class="page-sub" style="font-size:12px;">Sfoca tutti gli importi — passa il mouse (o tocca) sopra una cifra per rivelarla</div></div>
+        <div><div style="font-weight:600;font-size:13.5px;">Modalità Privacy ${ico('eyeOff')}</div></div>
         <div class="switch ${privacyOn()?'on':''}" id="privacySwitch"></div>
       </div>
     </div>
 
     <div class="card settings-section">
       <div class="card-title">Categorie &amp; Dettagli</div>
-      <div class="page-sub" style="margin-bottom:12px;">${DB.categorieUscite.length} categorie di uscita, ${DB.categorieEntrate.length} di entrata.</div>
-      <button class="btn" id="btnOpenCategorie">${ico('folder')} Gestisci categorie e dettagli</button>
+      <button class="btn" id="btnOpenCategorie" style="margin-top:12px;">${ico('folder')} Gestisci categorie e dettagli</button>
     </div>
 
     <div class="card settings-section">
       <div class="card-title">Metodi di Pagamento</div>
-      <div class="page-sub" style="margin-bottom:12px;">${DB.metodiPagamento.length} metod${DB.metodiPagamento.length===1?'o':'i'} registrat${DB.metodiPagamento.length===1?'o':'i'}.</div>
-      <button class="btn" id="btnOpenMetodi">${ico('creditCard')} Gestisci metodi di pagamento</button>
+      <button class="btn" id="btnOpenMetodi" style="margin-top:12px;">${ico('creditCard')} Gestisci metodi di pagamento</button>
     </div>
 
     <div class="card settings-section">
       <div class="card-title">Categorie Abbonamenti</div>
-      <div class="page-sub" style="margin-bottom:12px;">${DB.categorieAbbonamenti.length} categorie — determinano il bordo colorato delle card in Abbonamenti.</div>
-      <button class="btn" id="btnOpenCategorieAbb">${ico('folder')} Gestisci categorie abbonamenti</button>
+      <button class="btn" id="btnOpenCategorieAbb" style="margin-top:12px;">${ico('folder')} Gestisci categorie abbonamenti</button>
     </div>
 
     <div class="card settings-section">
       <div class="card-title">Etichette</div>
-      <div class="page-sub" style="margin-bottom:12px;">${DB.etichette.length} etichett${DB.etichette.length===1?'a':'e'} creat${DB.etichette.length===1?'a':'e'}.</div>
-      <button class="btn" id="btnOpenEtichette">${ico('tag')} Gestisci etichette</button>
+      <button class="btn" id="btnOpenEtichette" style="margin-top:12px;">${ico('tag')} Gestisci etichette</button>
     </div>
 
     <div class="card settings-section">
       <div class="card-title">Link Utili</div>
-      <div class="page-sub" style="margin-bottom:12px;">${DB.linkUtiliGenerici.length} link salvat${DB.linkUtiliGenerici.length===1?'o':'i'}.</div>
-      <button class="btn" id="btnOpenLinkUtili">${ico('link')} Gestisci link utili</button>
+      <button class="btn" id="btnOpenLinkUtili" style="margin-top:12px;">${ico('link')} Gestisci link utili</button>
     </div>
 
     <div class="card settings-section">
-      <div class="card-title">Sincronizzazione Google Drive ${ico('cloud')}</div>
-      <div class="page-sub" style="margin-bottom:12px;">Collega un account Google per tenere sincronizzati automaticamente i dati tra PC e mobile. I dati vengono salvati in un file dedicato dentro la cartella <b>"${GDRIVE_FOLDER_NAME}"</b> sul tuo Drive.</div>
-      <div class="field"><label>Client ID Google (da Google Cloud Console)</label><input type="text" id="gdriveClientId" value="${esc(gdriveClientId())}" placeholder="xxxxxxxxxx.apps.googleusercontent.com"></div>
+      <div class="card-title" style="display:flex; align-items:center; gap:8px;">
+        Sincronizzazione Google Drive ${ico('cloud')}
+        <button type="button" class="settings-info-btn settingsInfoToggle" data-target="gdriveInfo" title="Informazioni">${ico('info')}</button>
+      </div>
+      <div class="page-sub settings-info-body" id="gdriveInfo" style="display:none; margin-bottom:12px;">
+        Collega un account Google per tenere sincronizzati automaticamente i dati tra PC e mobile. I dati vengono salvati in un file dedicato dentro la cartella <b>"${GDRIVE_FOLDER_NAME}"</b> sul tuo Drive.
+        <div style="margin-top:8px;">${ico('alertTriangle')} Importante: l'accesso a Google Drive funziona solo se l'app viene aperta da un indirizzo web (es. GitHub Pages) registrato tra le "Authorized JavaScript origins" del progetto Google Cloud — non funziona aprendo il file direttamente dal computer (file://).</div>
+      </div>
+      <div class="field" style="margin-top:12px;"><label>Client ID Google (da Google Cloud Console)</label><input type="text" id="gdriveClientId" value="${esc(gdriveClientId())}" placeholder="xxxxxxxxxx.apps.googleusercontent.com"></div>
       <div class="settings-actions" style="margin-top:8px;">
         <button class="btn btn-sm" id="gdriveSaveClientId">Salva Client ID</button>
         <button class="btn btn-primary btn-sm" id="gdriveConnectBtn">${ico('link')} Connetti Google Drive</button>
         ${gdriveIsConnected() ? '<button class="btn btn-danger btn-sm" id="gdriveDisconnectBtn">Disconnetti</button>' : ''}
       </div>
       <div id="gdriveStatusLine" class="page-sub" style="margin-top:12px; font-weight:600;"></div>
-      <div class="page-sub" style="margin-top:10px;">${ico('alertTriangle')} Importante: l'accesso a Google Drive funziona solo se l'app viene aperta da un indirizzo web (es. GitHub Pages) registrato tra le "Authorized JavaScript origins" del progetto Google Cloud — non funziona aprendo il file direttamente dal computer (file://).</div>
     </div>
 
     <div class="card settings-section">
-      <div class="card-title">Regole Import ${ico('sparkle')}</div>
-      <div class="page-sub" style="margin-bottom:12px;">Ogni volta che correggi manualmente un abbinamento durante l'import, viene salvata qui una regola per riconoscerlo automaticamente nei prossimi caricamenti.</div>
-      <button class="btn" id="btnOpenImportRules">${ico('clipboard')} Vedi tutte le regole (${Object.keys(loadImportRules()).length})</button>
+      <div class="card-title" style="display:flex; align-items:center; gap:8px;">
+        Regole Import ${ico('sparkle')}
+        <button type="button" class="settings-info-btn settingsInfoToggle" data-target="importRulesInfo" title="Informazioni">${ico('info')}</button>
+      </div>
+      <div class="page-sub settings-info-body" id="importRulesInfo" style="display:none; margin-bottom:12px;">Ogni volta che correggi manualmente un abbinamento durante l'import, viene salvata qui una regola per riconoscerlo automaticamente nei prossimi caricamenti.</div>
+      <button class="btn" id="btnOpenImportRules" style="margin-top:12px;">${ico('clipboard')} Vedi tutte le regole (${Object.keys(loadImportRules()).length})</button>
     </div>
 
     <div class="card settings-section">
-      <div class="card-title">${ico('wind')} Pulizia Dettagli Duplicati</div>
-      <div class="page-sub" style="margin-bottom:14px;">Scansiona i movimenti alla ricerca di descrizioni scritte in modo leggermente diverso ma che indicano probabilmente la stessa cosa (es. "Iliad" e "Iliad ", oppure "Youtube Premium" e "YoutubePremium"), e le unisce in un click — nessuna modifica manuale riga per riga.</div>
-      <div id="dupCleanupList"></div>
+      <div class="card-title" style="display:flex; align-items:center; gap:8px;">
+        ${ico('wind')} Pulizia Dettagli Duplicati
+        <button type="button" class="settings-info-btn settingsInfoToggle" data-target="dupCleanupInfo" title="Informazioni">${ico('info')}</button>
+      </div>
+      <div class="page-sub settings-info-body" id="dupCleanupInfo" style="display:none; margin-bottom:14px;">Scansiona i movimenti alla ricerca di descrizioni scritte in modo leggermente diverso ma che indicano probabilmente la stessa cosa (es. "Iliad" e "Iliad ", oppure "Youtube Premium" e "YoutubePremium"), e le unisce in un click — nessuna modifica manuale riga per riga.</div>
+      <div id="dupCleanupList" style="margin-top:12px;"></div>
     </div>
 
     <div class="card settings-section">
-      <div class="card-title">Backup &amp; Dati</div>
-      <div class="settings-actions">
+      <div class="card-title" style="display:flex; align-items:center; gap:8px;">
+        Backup &amp; Dati
+        <button type="button" class="settings-info-btn settingsInfoToggle" data-target="backupInfo" title="Informazioni">${ico('info')}</button>
+      </div>
+      <div class="page-sub settings-info-body" id="backupInfo" style="display:none; margin-bottom:12px;">Tutti i dati sono salvati esclusivamente nel browser (localStorage). Esegui backup regolari per non perderli.</div>
+      <div class="settings-actions" style="margin-top:12px;">
         <button class="btn" id="exportBtn">${ico('download')} Esporta backup (JSON)</button>
         <label class="btn" for="importFile" style="margin:0;">${ico('upload')} Importa backup (JSON)</label>
         <input type="file" id="importFile" accept="application/json" style="display:none;">
         <button class="btn btn-danger" id="resetBtn">${ico('rotateCcw')} Ripristina dati originali</button>
       </div>
-      <div class="page-sub" style="margin-top:12px;">Tutti i dati sono salvati esclusivamente nel browser (localStorage). Esegui backup regolari per non perderli.</div>
     </div>
   `;
+
+  document.getElementById('accentSwatchCurrent').onclick = ()=>{
+    const row = document.getElementById('accentSwatchRow');
+    row.style.display = row.style.display==='none' ? 'flex' : 'none';
+  };
+  document.querySelectorAll('.settingsInfoToggle').forEach(b=>{
+    b.onclick = ()=>{
+      const body = document.getElementById(b.dataset.target);
+      body.style.display = body.style.display==='none' ? 'block' : 'none';
+    };
+  });
 
   document.getElementById('themeSwitch').onclick = ()=>{
     const next = currentTheme()==='light' ? 'dark' : 'light';
