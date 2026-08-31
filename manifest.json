@@ -1,7 +1,7 @@
 {
   "name": "Gestionale — Finance & Personal Hub",
   "short_name": "Gestionale",
-  "start_url": "./Gestionale.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
