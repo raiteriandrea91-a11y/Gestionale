@@ -221,6 +221,13 @@ button .ic-svg, .btn .ic-svg{vertical-align:-3px;}
 .etichette-row{display:inline-flex; flex-wrap:wrap; gap:4px; vertical-align:middle;}
 .tag-input-wrap{display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:7px 10px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2);}
 .tag-input-wrap input{flex:1; min-width:120px; border:none; background:none; outline:none; color:var(--text); font-size:13px; padding:3px 0;}
+.etichetta-field{position:relative;}
+.etichetta-suggest{position:absolute; left:0; right:0; top:calc(100% + 6px); background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 12px 28px rgba(0,0,0,.4); max-height:220px; overflow-y:auto; z-index:60; padding:6px; display:none;}
+.etichetta-suggest.open{display:block;}
+.etichetta-suggest-empty{padding:12px 10px; font-size:12.5px; color:var(--text-faint); text-align:center;}
+.etichetta-suggest-item{display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:13px; color:var(--text); transition:background .12s ease;}
+.etichetta-suggest-item:hover{background:var(--surface-2);}
+.etichetta-suggest-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
 .tag-chips{display:flex; flex-wrap:wrap; gap:6px;}
 .nav-item:hover{background:rgba(255,255,255,.09); color:#fff;}
 .nav-item.active{background:rgba(255,255,255,.15); color:#fff;}
@@ -734,6 +741,8 @@ tbody tr:hover .row-actions{opacity:1; pointer-events:auto;}
 .modal-backdrop.show{display:flex;}
 .modal{background:var(--surface); border:1px solid var(--border); border-radius:16px; width:100%; max-width:460px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.5);}
 .modal.modal-wide{max-width:1160px;}
+.modal.modal-wide.modal-etichette{max-width:580px;}
+.modal.modal-narrow{max-width:640px;}
 @media(max-width:880px){
   /* Pannelli di Impostazioni (Categorie, Metodi, Etichette, ecc.): su mobile diventano una vera
      "pagina" a tutto schermo che scorre da destra, invece del popup centrale con sfondo scurito. */
@@ -1039,20 +1048,49 @@ html[data-theme="light"] .import-min-badge{color:#0B3A2E;}
 .cm-sub-drag{cursor:grab; color:var(--text-faint); font-size:14px; flex-shrink:0; letter-spacing:-2px; line-height:1;}
 
 /* ---------- CHIP A FLUSSO LIBERO (Categorie, Metodi Pagamento, Categorie Abbonamenti) ---------- */
-.chip-flow{display:flex; flex-wrap:wrap; gap:8px;}
-.chip-item{display:inline-flex; align-items:center; gap:7px; padding:6px 12px 6px 6px; border-radius:999px; background:var(--surface-2); border:1.5px solid transparent; cursor:pointer; user-select:none; transition:border-color .15s ease, background .15s ease, opacity .15s ease;}
-.chip-item:hover{background:var(--surface-3);}
-.chip-item.active{border-color:var(--text); background:var(--surface-3);}
-.chip-item.dragging{opacity:.35;}
-.chip-item.drag-over{box-shadow:inset 3px 0 0 var(--mint);}
-.chip-icon-dot{width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0;}
-.chip-name{font-weight:600; font-size:13px; white-space:nowrap;}
-.chip-count{font-size:10.5px; color:var(--text-faint);}
-.chip-add{display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; border:1.5px dashed var(--border-soft); background:none; color:var(--text-dim); cursor:pointer; font-size:13px; font-weight:600;}
-.chip-add:hover{border-color:var(--text-dim); color:var(--text);}
-.chip-expand-panel{margin-top:14px; padding:16px; border-radius:14px; background:var(--surface-2); border:1px solid var(--border-soft);}
-.chip-add-inline{display:flex; gap:8px; margin-top:10px;}
+/* ---------- RIGHE PIATTE STILE LINEAR (Categorie, Metodi Pagamento, Categorie Abbonamenti) ---------- */
+.card-list{background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); overflow:hidden;}
+.card-item{border-top:1px solid var(--border-soft); transition:background .12s ease;}
+.card-item:first-child{border-top:none;}
+.card-item.dragging{opacity:.35;}
+.card-item.drag-over-top{box-shadow:inset 0 2px 0 var(--mint);}
+.card-item.drag-over-bottom{box-shadow:inset 0 -2px 0 var(--mint);}
+.card-item-head{display:flex; align-items:center; gap:11px; padding:12px 16px; cursor:pointer;}
+.card-item:hover .card-item-head{background:var(--surface-2);}
+.card-item.expanded .card-item-head{background:var(--surface-2);}
+.card-item-icon{width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0;}
+.card-item-icon:empty{width:8px; height:8px; margin:7px;}
+.card-item-name{font-weight:500; font-size:13.5px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.card-item-count{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-faint); flex-shrink:0;}
+.card-item-chev{color:var(--text-faint); flex-shrink:0; display:flex; transition:transform .18s ease;}
+.card-item.expanded .card-item-chev{transform:rotate(90deg); color:var(--mint);}
+.card-item-expand{padding:2px 16px 18px 49px;}
+.card-add{display:flex; align-items:center; gap:8px; padding:12px 16px; border-top:1px solid var(--border-soft); background:none; color:var(--text-faint); cursor:pointer; font-size:13px; font-weight:500; width:100%; text-align:left;}
+.card-add:hover{color:var(--mint); background:var(--surface-2);}
+.card-add-inline{display:flex; align-items:center; gap:8px; padding:10px 16px; border-top:1px solid var(--border-soft);}
+.card-add-inline input{flex:1;}
 
+.ec-detail-row{display:flex; align-items:center; gap:8px; padding:6px 2px; border-bottom:1px solid var(--border-soft); cursor:grab;}
+.ec-detail-row:last-of-type{border-bottom:none;}
+.ec-detail-row.dragging{opacity:.35;}
+.ec-detail-row.drag-over-top{box-shadow:inset 0 2px 0 var(--mint);}
+.ec-detail-row.drag-over-bottom{box-shadow:inset 0 -2px 0 var(--mint);}
+.ec-detail-row input{flex:1; background:none; border:none; color:var(--text); font-size:12.5px; font-family:inherit; padding:2px 0;}
+.ec-detail-row input:focus{outline:none;}
+.ec-detail-del{opacity:0; transition:opacity .12s;}
+.ec-detail-row:hover .ec-detail-del{opacity:1;}
+.add-link{display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--mint); cursor:pointer; margin-top:8px; font-weight:600; background:none; border:none; padding:0;}
+.add-link:hover{color:var(--text);}
+
+.list-toolbar{display:flex; justify-content:flex-end; padding:10px 16px; border-bottom:1px solid var(--border-soft);}
+.sort-toggle-btn{display:inline-flex; align-items:center; gap:6px; background:none; border:none; color:var(--text-dim); font-size:12.5px; font-weight:600; cursor:pointer; padding:4px 6px; border-radius:6px;}
+.sort-toggle-btn:hover{color:var(--text); background:var(--surface-2);}
+.sort-toggle-btn.active{color:var(--mint);}
+.reorder-handle{cursor:grab; color:var(--text-faint); font-size:15px; padding:0 4px 0 0; flex-shrink:0; letter-spacing:-2px; line-height:1;}
+.card-item.reorder-row .card-item-head{cursor:default;}
+.ec-detail-row.reorder-row{cursor:default;}
+.ec-detail-row.reorder-row .ec-detail-input{pointer-events:none; color:var(--text-dim);}
+.ec-detail-row.reorder-row .ec-detail-del{display:none;}
 /* ---------- ETICHETTE: stessa scatola JS, aspetto alleggerito a chip a flusso ---------- */
 #etichetteManageList{display:block;}
 #etichetteManageList .cm-item{display:inline-block; vertical-align:top; border:none; background:var(--surface-2); border-radius:999px; margin:0 8px 8px 0; overflow:visible;}
@@ -1116,12 +1154,16 @@ html[data-theme="light"] .import-min-badge{color:#0B3A2E;}
 .cdt-bar-track{width:100%; height:4px; background:var(--surface-3); border-radius:2px; overflow:hidden;}
 .compare-detail-row.sub-row .cdt-bar-track{height:3px; opacity:.75;}
 .cdt-bar-fill{height:100%; border-radius:2px; transition:width .3s ease;}
+.etichetta-fav-btn{width:26px; height:26px; border-radius:50%; border:none; background:transparent; padding:0; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:var(--text-faint); transition:color .15s ease, transform .15s ease;}
+.etichetta-fav-btn:hover{color:var(--text-dim); transform:scale(1.1);}
+.etichetta-fav-btn.active{color:var(--accent,var(--mint));}
+.etichetta-fav-btn.active svg{fill:currentColor;}
 .etichetta-color-btn, .cat-color-btn{width:19px; height:19px; border-radius:50%; border:2px solid var(--border-soft); padding:0; cursor:pointer; flex-shrink:0; box-shadow:0 1px 2px rgba(0,0,0,.25); transition:transform .15s ease; display:flex; align-items:center; justify-content:center; color:#fff;}
 .etichetta-color-btn:hover, .cat-color-btn:hover{transform:scale(1.12);}
 .etichetta-color-row, .cat-color-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px 14px 0;}
 .cat-icon-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 14px 12px; border-bottom:1px dashed var(--border-soft); margin-bottom:6px;}
 .cat-color-row:not(.expanded) .cat-color-swatch:not(.active), .cat-icon-row:not(.expanded) .cat-icon-swatch:not(.active){display:none;}
-.field-row-2col{display:flex; gap:16px;}
+.field-row-2col{display:flex; gap:10px;}
 .field-row-2col .field{flex:1; min-width:0;}
 .cat-icon-swatch{width:30px; height:30px; border-radius:9px; border:1.5px solid var(--border-soft); background:var(--surface-2); padding:0; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-dim); transition:transform .15s ease, border-color .15s ease, background .15s ease, color .15s ease;}
 .cat-icon-swatch:hover{transform:scale(1.1);}
@@ -1480,7 +1522,7 @@ th.src-col, td.src-col{width:26px; text-align:center; padding-left:0; padding-ri
   </main>
 </div>
 
-<datalist id="etichetteDatalist"></datalist>
+
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal" id="modalBox"></div>
 </div>
@@ -1586,6 +1628,7 @@ function ensureMetodiPagamento(){
 function ensureEtichette(){
   if(!Array.isArray(DB.etichette)) DB.etichette = [];
   if(!DB.etichetteColori || typeof DB.etichetteColori!=='object') DB.etichetteColori = {};
+  if(!Array.isArray(DB.etichettePreferite)) DB.etichettePreferite = [];
 }
 function ensureCategorieColori(){
   if(!DB.categorieColori || typeof DB.categorieColori!=='object') DB.categorieColori = {};
@@ -1654,7 +1697,6 @@ function saveDB(){
   invalidateMovIndex(); // i movimenti possono essere cambiati: l'indice per anno va ricostruito alla prossima richiesta
   gdriveSchedulePush();
   if(typeof updateNavBadges==='function') updateNavBadges();
-  if(typeof refreshEtichetteDatalist==='function') refreshEtichetteDatalist();
 }
 
 /* ---- Indice movimenti per anno ----
@@ -1864,6 +1906,7 @@ function esc(s){
 
 /* ---- Libreria icone SVG (stile coerente con la sidebar: stroke, 24x24, round caps) ---- */
 const ICONS = {
+  arrowsSort:'<path d="M3 9l4-4 4 4"></path><path d="M7 5v14"></path><path d="M21 15l-4 4-4-4"></path><path d="M17 19V5"></path>',
   edit:'<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>',
   trash:'<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line>',
   x:'<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>',
@@ -1934,7 +1977,8 @@ const ICONS = {
   scissors:'<circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line>',
   graduationCap:'<path d="M22 10 12 5 2 10l10 5 10-5z"></path><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"></path>',
   wallet:'<path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4z"></path>',
-  wrench:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>'
+  wrench:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>',
+  star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>'
 };
 function ico(name, size){
   size = size || 15;
@@ -3270,12 +3314,11 @@ function computeEtichettaStats(nome){
   const uscite = totRows.reduce((s,m)=>s+(m.uscite||0),0);
   return { rows, entrate, uscite, saldo: entrate-uscite };
 }
-function refreshEtichetteDatalist(){
-  const dl = document.getElementById('etichetteDatalist');
-  if(dl) dl.innerHTML = DB.etichette.map(t=>`<option value="${esc(t)}">`).join('');
-}
-/* Wiring riusabile per un campo a chip di etichette (usato nel modulo Movimento e nel filtro Ricerca) */
-function wireEtichetteChipInput(chipsElId, inputElId, getList, setList, onChange){
+/* Wiring riusabile per un campo a chip di etichette (usato nel modulo Movimento, nella modifica in
+   blocco e nel filtro Ricerca). Se viene passato suggestElId, mostra sotto al campo una tendina in
+   stile app (sostituisce il vecchio <datalist> nativo): a campo vuoto/al focus elenca le sole
+   etichette preferite (A-Z); digitando, la ricerca si allarga a tutte le etichette esistenti (A-Z). */
+function wireEtichetteChipInput(chipsElId, inputElId, getList, setList, onChange, suggestElId){
   function render(){
     const wrap = document.getElementById(chipsElId);
     wrap.innerHTML = getList().map(t=>etichettaChipHtml(t, {removable:true})).join('');
@@ -3283,27 +3326,71 @@ function wireEtichetteChipInput(chipsElId, inputElId, getList, setList, onChange
       setList(getList().filter(t=>t!==b.dataset.t));
       render();
       if(onChange) onChange();
+      if(suggestEl) renderSuggest();
     });
   }
   render();
   const input = document.getElementById(inputElId);
-  function commitPending(){
-    const val = input.value.trim().replace(/,$/,'');
+  function addTag(val){
+    val = String(val||'').trim();
     if(val && !getList().includes(val)){
       setList([...getList(), val]);
       render();
       if(onChange) onChange();
     }
+  }
+  function commitPending(){
+    const val = input.value.trim().replace(/,$/,'');
+    addTag(val);
     input.value = '';
   }
   input.addEventListener('keydown', e=>{
     if(e.key==='Enter' || e.key===','){
       e.preventDefault();
       commitPending();
+      if(suggestEl) renderSuggest();
     }
   });
-  input.addEventListener('blur', commitPending);
+  input.addEventListener('blur', ()=>{ commitPending(); closeSuggest(); });
   input._commitPendingEtichetta = commitPending;
+
+  const suggestEl = suggestElId ? document.getElementById(suggestElId) : null;
+  function renderSuggest(){}
+  function closeSuggest(){}
+  if(suggestEl){
+    const favoriteTags = ()=>(Array.isArray(DB.etichettePreferite) ? DB.etichettePreferite : [])
+      .filter(t=>DB.etichette.includes(t)).sort((a,b)=>a.localeCompare(b));
+    const matchingTags = q=>{
+      const ql = q.toLowerCase();
+      return DB.etichette.filter(t=>t.toLowerCase().includes(ql)).sort((a,b)=>a.localeCompare(b));
+    };
+    renderSuggest = function(){
+      const q = input.value.trim();
+      const selected = getList();
+      const items = (q ? matchingTags(q) : favoriteTags()).filter(t=>!selected.includes(t));
+      if(!items.length){
+        suggestEl.innerHTML = `<div class="etichetta-suggest-empty">${q ? 'Nessuna etichetta trovata' : 'Nessuna preferita'}</div>`;
+      } else {
+        suggestEl.innerHTML = items.map(t=>{
+          const c = etichettaColor(t);
+          return `<div class="etichetta-suggest-item" data-t="${esc(t)}"><span class="etichetta-suggest-dot" style="background:${c};"></span><span>${esc(t)}</span></div>`;
+        }).join('');
+        suggestEl.querySelectorAll('.etichetta-suggest-item').forEach(it=>{
+          it.addEventListener('mousedown', e=>{
+            e.preventDefault();
+            addTag(it.dataset.t);
+            input.value = '';
+            renderSuggest();
+          });
+        });
+      }
+      suggestEl.classList.add('open');
+    };
+    closeSuggest = function(){ suggestEl.classList.remove('open'); };
+    input.addEventListener('focus', renderSuggest);
+    input.addEventListener('input', renderSuggest);
+    suggestEl.addEventListener('mousedown', e=>e.preventDefault());
+  }
 }
 
 function updateMovBulkBar(){ updateBulkBarGeneric('mov', movSelected.size); }
@@ -3947,9 +4034,12 @@ function openMovModal(id, onSaved, duplicateFrom){
         <span class="slim-icon">${ico('tag',14)}</span>
         <div class="slim-main field">
           <label>Etichette (opzionale)</label>
-          <div class="tag-input-wrap">
-            <div class="tag-chips" id="mEtichetteChips"></div>
-            <input type="text" id="mEtichetteInput" list="etichetteDatalist" placeholder="Scrivi e premi Invio…">
+          <div class="etichetta-field">
+            <div class="tag-input-wrap">
+              <div class="tag-chips" id="mEtichetteChips"></div>
+              <input type="text" id="mEtichetteInput" placeholder="Scrivi e premi Invio…">
+            </div>
+            <div class="etichetta-suggest" id="mEtichetteSuggest"></div>
           </div>
         </div>
       </div>
@@ -4022,9 +4112,8 @@ function openMovModal(id, onSaved, duplicateFrom){
     metodoSel.innerHTML = metodoOptions.map(m=>`<option value="${esc(m)}" ${m===selected?'selected':''}>${esc(m)}</option>`).join('');
   }
   refreshMetodoOptions((prefill && prefill.metodoPagamento) ? prefill.metodoPagamento : 'Conto corrente');
-  refreshEtichetteDatalist();
   let mEtichette = editing ? (editing.etichette||[]).slice() : [];
-  wireEtichetteChipInput('mEtichetteChips','mEtichetteInput', ()=>mEtichette, (v)=>{ mEtichette = v; });
+  wireEtichetteChipInput('mEtichetteChips','mEtichetteInput', ()=>mEtichette, (v)=>{ mEtichette = v; }, null, 'mEtichetteSuggest');
 
   document.getElementById('mClose').onclick = closeModal;
   document.getElementById('mCancel').onclick = closeModal;
@@ -4692,15 +4781,18 @@ function openBulkEtichettaModal(ids, onDone, clearFn){
     <div class="modal-head"><h3>${ico('tag')} Etichette</h3><button class="close-x" id="betClose">✕</button></div>
     <div class="modal-body">
       <div class="page-sub" style="margin-bottom:12px;">Aggiungi una o più etichette a ${ids.length} moviment${ids.length===1?'o':'i'} selezionat${ids.length===1?'o':'i'}. Le etichette già presenti sui singoli movimenti restano intatte.</div>
-      <div class="tag-input-wrap">
-        <div class="tag-chips" id="betChips"></div>
-        <input type="text" id="betInput" list="etichetteDatalist" placeholder="Scrivi e premi Invio…">
+      <div class="etichetta-field">
+        <div class="tag-input-wrap">
+          <div class="tag-chips" id="betChips"></div>
+          <input type="text" id="betInput" placeholder="Scrivi e premi Invio…">
+        </div>
+        <div class="etichetta-suggest" id="betSuggest"></div>
       </div>
     </div>
     <div class="modal-foot"><button class="btn" id="betCancel">Annulla</button><button class="btn btn-primary" id="betApply">Applica</button></div>
   `;
   openModal(html);
-  wireEtichetteChipInput('betChips','betInput', ()=>pending, (v)=>{ pending = v; });
+  wireEtichetteChipInput('betChips','betInput', ()=>pending, (v)=>{ pending = v; }, null, 'betSuggest');
   const close = closeModal;
   document.getElementById('betClose').onclick = close;
   document.getElementById('betCancel').onclick = close;
@@ -4859,32 +4951,49 @@ function openBulkMetodoModal(count, applyFn, onDone, clearFn){
   };
 }
 function etichettaCount(nome){ return DB.movimenti.filter(m=>Array.isArray(m.etichette) && m.etichette.includes(nome)).length; }
+function renderEtichettaManageItem(t){
+  const n = etichettaCount(t);
+  const c = etichettaColor(t);
+  const isFav = Array.isArray(DB.etichettePreferite) && DB.etichettePreferite.includes(t);
+  return `<div class="cm-item mm-item" data-etichetta="${esc(t)}">
+    <div class="cm-head">
+      <div class="cm-head-main">
+        ${etichettaChipHtml(t)}
+        <span class="cm-count">${n} moviment${n===1?'o':'i'}</span>
+      </div>
+      <div class="row-actions cm-actions" style="opacity:1;">
+        <button type="button" class="etichetta-fav-btn ${isFav?'active':''}" data-t="${esc(t)}" title="${isFav?'Rimuovi dai preferiti':'Aggiungi ai preferiti'}">${ico('star',14)}</button>
+        <button type="button" class="etichetta-color-btn toggleEtichettaColor" data-t="${esc(t)}" title="Cambia colore" style="background:${c};"></button>
+        <button class="btn btn-icon btn-sm renameEtichetta" data-t="${esc(t)}" title="Rinomina">${ico('edit')}</button>
+        <button class="btn btn-icon btn-sm delEtichetta" data-t="${esc(t)}" title="Elimina">${ico('trash')}</button>
+      </div>
+    </div>
+    <div class="cm-body">
+      <div class="etichetta-color-row">
+        ${ETICHETTA_COLOR_PALETTE.map(col=>`<button type="button" class="etichetta-color-swatch ${col.toLowerCase()===c.toLowerCase()?'active':''}" data-t="${esc(t)}" data-color="${col}" style="background:${col};" title="${col}"></button>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
 function renderEtichetteModalBody(){
-  const list = [...DB.etichette].sort((a,b)=>a.localeCompare(b));
+  const favSet = new Set(Array.isArray(DB.etichettePreferite) ? DB.etichettePreferite : []);
+  const all = [...DB.etichette].sort((a,b)=>a.localeCompare(b));
+  const favs = all.filter(t=>favSet.has(t));
+  const others = all.filter(t=>!favSet.has(t));
+  if(!all.length){
+    return `
+      <div class="page-sub" style="margin-bottom:14px;">Clicca un'etichetta per vedere il resoconto dei movimenti. La stella la aggiunge alle preferite, mostrate per prime quando scegli un'etichetta su un movimento.</div>
+      <div class="empty-state" style="padding:20px;">Nessuna etichetta creata finora. Aggiungine una da un movimento.</div>
+    `;
+  }
   return `
-    <div class="page-sub" style="margin-bottom:14px;">Clicca un'etichetta per vedere il resoconto dei movimenti. Rinomina o elimina con le azioni rapide.</div>
-    <div id="etichetteManageList">${list.length ? list.map(t=>{
-      const n = etichettaCount(t);
-      const c = etichettaColor(t);
-      return `<div class="cm-item mm-item" data-etichetta="${esc(t)}">
-        <div class="cm-head">
-          <div class="cm-head-main">
-            ${etichettaChipHtml(t)}
-            <span class="cm-count">${n} moviment${n===1?'o':'i'}</span>
-          </div>
-          <div class="row-actions cm-actions" style="opacity:1;">
-            <button type="button" class="etichetta-color-btn toggleEtichettaColor" data-t="${esc(t)}" title="Cambia colore" style="background:${c};"></button>
-            <button class="btn btn-icon btn-sm renameEtichetta" data-t="${esc(t)}" title="Rinomina">${ico('edit')}</button>
-            <button class="btn btn-icon btn-sm delEtichetta" data-t="${esc(t)}" title="Elimina">${ico('trash')}</button>
-          </div>
-        </div>
-        <div class="cm-body">
-          <div class="etichetta-color-row">
-            ${ETICHETTA_COLOR_PALETTE.map(col=>`<button type="button" class="etichetta-color-swatch ${col.toLowerCase()===c.toLowerCase()?'active':''}" data-t="${esc(t)}" data-color="${col}" style="background:${col};" title="${col}"></button>`).join('')}
-          </div>
-        </div>
-      </div>`;
-    }).join('') : `<div class="empty-state" style="padding:20px;">Nessuna etichetta creata finora. Aggiungine una da un movimento.</div>`}</div>
+    <div class="page-sub" style="margin-bottom:14px;">Clicca un'etichetta per vedere il resoconto dei movimenti. La stella la aggiunge alle preferite, mostrate per prime quando scegli un'etichetta su un movimento.</div>
+    <div id="etichetteManageList">
+      <div class="section-label" style="margin:0 0 8px;">Preferite</div>
+      <div id="etichetteManageListFav">${favs.length ? favs.map(renderEtichettaManageItem).join('') : `<div class="empty-state" style="padding:14px;">Nessuna etichetta preferita. Clicca la stella su un'etichetta qui sotto per aggiungerla.</div>`}</div>
+      <div class="section-label" style="margin:18px 0 8px;">Tutte le etichette</div>
+      <div id="etichetteManageListAll">${others.length ? others.map(renderEtichettaManageItem).join('') : `<div class="empty-state" style="padding:14px;">Nessun'altra etichetta.</div>`}</div>
+    </div>
   `;
 }
 function openEtichetteModal(){
@@ -4894,7 +5003,9 @@ function openEtichetteModal(){
     <div class="modal-foot"><button class="btn" id="etmCloseBtn">Chiudi</button></div>
   `;
   openSettingsPanel(html);
-  document.getElementById('modalBox').dataset.kind = 'etichette';
+  const etmBox = document.getElementById('modalBox');
+  etmBox.dataset.kind = 'etichette';
+  etmBox.classList.add('modal-etichette');
   const close = ()=>{ closeModal(); renderImpostazioni(); };
   document.getElementById('etmClose').onclick = close;
   document.getElementById('etmCloseBtn').onclick = close;
@@ -4918,6 +5029,14 @@ function wireEtichetteModal(){
     e.stopPropagation();
     b.closest('.cm-item').classList.toggle('open');
   });
+  listEl.querySelectorAll('.etichetta-fav-btn').forEach(b=>b.onclick = (e)=>{
+    e.stopPropagation();
+    if(!Array.isArray(DB.etichettePreferite)) DB.etichettePreferite = [];
+    const t = b.dataset.t;
+    if(DB.etichettePreferite.includes(t)) DB.etichettePreferite = DB.etichettePreferite.filter(x=>x!==t);
+    else DB.etichettePreferite.push(t);
+    saveDB(); refreshEtichetteModal();
+  });
   listEl.querySelectorAll('.etichetta-color-swatch').forEach(b=>b.onclick = (e)=>{
     e.stopPropagation();
     DB.etichetteColori[b.dataset.t] = b.dataset.color;
@@ -4935,6 +5054,7 @@ function wireEtichetteModal(){
     DB.etichette = DB.etichette.filter(x=>x!==t);
     DB.movimenti.forEach(m=>{ if(Array.isArray(m.etichette)) m.etichette = m.etichette.filter(x=>x!==t); });
     if(DB.etichetteColori) delete DB.etichetteColori[t];
+    if(Array.isArray(DB.etichettePreferite)) DB.etichettePreferite = DB.etichettePreferite.filter(x=>x!==t);
     saveDB(); toast('Etichetta eliminata'); refreshEtichetteModal();
   });
 }
@@ -4949,6 +5069,10 @@ function renameEtichetta(oldName, newName){
   if(DB.etichetteColori && DB.etichetteColori[oldName]!==undefined){
     DB.etichetteColori[newName] = DB.etichetteColori[oldName];
     delete DB.etichetteColori[oldName];
+  }
+  if(Array.isArray(DB.etichettePreferite)){
+    const i = DB.etichettePreferite.indexOf(oldName);
+    if(i>-1) DB.etichettePreferite[i] = newName;
   }
   saveDB(); toast('Etichetta aggiornata'); refreshEtichetteModal();
 }
@@ -6278,9 +6402,12 @@ function renderRicercaSearchBody(){
           </div>
           <div class="time-selector-row full">
             <span class="time-selector-label">Etichette</span>
-            <div class="tag-input-wrap">
-              <div class="tag-chips" id="searchEtichetteChips"></div>
-              <input type="text" id="searchEtichetteInput" list="etichetteDatalist" placeholder="Filtra per etichetta…">
+            <div class="etichetta-field">
+              <div class="tag-input-wrap">
+                <div class="tag-chips" id="searchEtichetteChips"></div>
+                <input type="text" id="searchEtichetteInput" placeholder="Filtra per etichetta…">
+              </div>
+              <div class="etichetta-suggest" id="searchEtichetteSuggest"></div>
             </div>
           </div>
         </div>
@@ -6351,8 +6478,7 @@ function renderRicercaSearchBody(){
   document.getElementById('searchCategoria').oninput = e=>{ searchFilter.categoria = e.target.value; debouncedSearch(); };
   document.getElementById('searchDettaglio').oninput = e=>{ searchFilter.dettaglio = e.target.value; debouncedSearch(); };
   document.getElementById('searchNote').oninput = e=>{ searchFilter.note = e.target.value; debouncedSearch(); };
-  refreshEtichetteDatalist();
-  wireEtichetteChipInput('searchEtichetteChips','searchEtichetteInput', ()=>searchFilter.etichette, (v)=>{ searchFilter.etichette = v; }, doSearch);
+  wireEtichetteChipInput('searchEtichetteChips','searchEtichetteInput', ()=>searchFilter.etichette, (v)=>{ searchFilter.etichette = v; }, doSearch, 'searchEtichetteSuggest');
   document.getElementById('btnPdfRicerca').onclick = ()=>generatePdfReport('ricerca');
   doSearch();
 }
@@ -7922,6 +8048,7 @@ function renderDupCleanupList(){
    (nome, colore, icona, dettagli) al posto della vecchia lista di righe/modale separata. */
 let catSettingsTab = 'uscita';
 let catExpandedCat = null;
+let catReorderMode = false;
 let catAddingNew = false;
 
 function renderCategorieModalBody(){
@@ -7935,9 +8062,7 @@ function renderCategorieModalBody(){
         <button id="catTabEntrate" class="${catSettingsTab==='entrata'?'active':''}">${ico('arrowUpRight')} Entrate</button>
       </div>
     </div>
-    <div class="chip-flow" id="catChipFlow"></div>
-    <div id="catAddInline"></div>
-    <div id="catExpandPanel"></div>`;
+    <div class="card-list" id="catCardList"></div>`;
 }
 function openCategorieModal(){
   const html = `
@@ -7946,6 +8071,7 @@ function openCategorieModal(){
     <div class="modal-foot"><button class="btn" id="catmCloseBtn">Chiudi</button></div>
   `;
   openSettingsPanel(html);
+  document.getElementById('modalBox').classList.add('modal-narrow');
   document.getElementById('modalBox').dataset.kind = 'categorie';
   const close = ()=>{ closeModal(); renderImpostazioni(); };
   document.getElementById('catmClose').onclick = close;
@@ -7959,168 +8085,178 @@ function refreshCategorieModal(){
     wireCategorieSection();
   } else if(currentView==='impostazioni'){ renderImpostazioni(); }
 }
-function refreshCatChipCount(cat){
-  const flowEl = document.getElementById('catChipFlow');
-  const chip = flowEl && flowEl.querySelector(`.chip-item[data-key="${CSS.escape(cat)}"]`);
-  if(!chip) return;
-  const subs = cat==='Abbonamenti' ? abbonamentiSottocategorie() : (DB.sottocategorie[cat]||[]);
-  const countEl = chip.querySelector('.chip-count');
-  if(countEl) countEl.textContent = subs.length;
-}
 
 function wireCategorieSection(){
-  document.getElementById('catTabUscite').onclick = ()=>{ catSettingsTab='uscita'; catExpandedCat=null; catAddingNew=false; refreshCategorieModal(); };
-  document.getElementById('catTabEntrate').onclick = ()=>{ catSettingsTab='entrata'; catExpandedCat=null; catAddingNew=false; refreshCategorieModal(); };
+  document.getElementById('catTabUscite').onclick = ()=>{ catSettingsTab='uscita'; catExpandedCat=null; catAddingNew=false; catReorderMode=false; refreshCategorieModal(); };
+  document.getElementById('catTabEntrate').onclick = ()=>{ catSettingsTab='entrata'; catExpandedCat=null; catAddingNew=false; catReorderMode=false; refreshCategorieModal(); };
+  renderCatCardList();
+}
 
+function renderCatCardList(){
   const list = catSettingsTab==='uscita' ? DB.categorieUscite : DB.categorieEntrate;
-  const flowEl = document.getElementById('catChipFlow');
-  flowEl.innerHTML = list.map(cat=>{
-    const subs = cat==='Abbonamenti' ? abbonamentiSottocategorie() : (DB.sottocategorie[cat]||[]);
-    return `<div class="chip-item ${catExpandedCat===cat?'active':''}" data-key="${esc(cat)}" draggable="true">
-      <span class="chip-icon-dot" style="background:${categoryColor(cat)};">${ico(categoryIcon(cat),13)}</span>
-      <span class="chip-name">${esc(cat)}</span>
-      <span class="chip-count">${subs.length}</span>
-    </div>`;
-  }).join('') + `<button type="button" class="chip-add" id="catAddChip">${ico('plus',14)} Categoria</button>`;
+  const listEl = document.getElementById('catCardList');
+  const toolbar = list.length>1 ? `<div class="list-toolbar"><button type="button" class="sort-toggle-btn ${catReorderMode?'active':''}" id="catSortToggle">${ico('arrowsSort',13)} ${catReorderMode?'Fatto':'Ordina'}</button></div>` : '';
+  listEl.innerHTML = toolbar + list.map(cat=>renderCatCardHtml(cat)).join('') + (catReorderMode ? '' : (catAddingNew ? `
+    <div class="card-add-inline"><input type="text" id="newCatInput" placeholder="${catSettingsTab==='uscita'?'Nuova categoria di uscita…':'Nuova categoria di entrata…'}"><button class="btn btn-sm" id="addCatBtn">Aggiungi</button></div>
+  ` : `<button type="button" class="card-add" id="catAddChip">${ico('plus',14)} Aggiungi categoria</button>`));
 
-  flowEl.querySelectorAll('.chip-item').forEach(chip=>{
-    chip.onclick = ()=>{
-      const cat = chip.dataset.key;
-      catAddingNew = false;
-      catExpandedCat = (catExpandedCat===cat) ? null : cat;
-      flowEl.querySelectorAll('.chip-item').forEach(c=>c.classList.toggle('active', c.dataset.key===catExpandedCat));
-      renderCatAddInline();
-      renderCatExpandPanel();
-    };
-  });
-  document.getElementById('catAddChip').onclick = ()=>{
-    catExpandedCat = null;
-    catAddingNew = !catAddingNew;
-    flowEl.querySelectorAll('.chip-item').forEach(c=>c.classList.remove('active'));
-    renderCatAddInline();
-    renderCatExpandPanel();
+  if(list.length>1) document.getElementById('catSortToggle').onclick = ()=>{
+    catReorderMode = !catReorderMode;
+    if(catReorderMode){ catExpandedCat=null; catAddingNew=false; }
+    renderCatCardList();
   };
 
-  wireChipDragDrop(flowEl, list, refreshCategorieModal);
+  if(!catReorderMode){
+    listEl.querySelectorAll('.card-item[data-key]:not(.expanded)').forEach(card=>{
+      card.onclick = ()=>{ catAddingNew=false; catExpandedCat = card.dataset.key; renderCatCardList(); };
+    });
 
-  renderCatAddInline();
-  renderCatExpandPanel();
-}
+    const expandedCard = listEl.querySelector('.card-item.expanded');
+    if(expandedCard) wireCatExpandedCard(expandedCard, expandedCard.dataset.key);
 
-function renderCatAddInline(){
-  const el = document.getElementById('catAddInline');
-  if(!catAddingNew){ el.innerHTML=''; return; }
-  el.innerHTML = `<div class="chip-add-inline">
-    <input type="text" id="newCatInput" placeholder="${catSettingsTab==='uscita'?'Nuova categoria di uscita…':'Nuova categoria di entrata…'}">
-    <button class="btn btn-sm" id="addCatBtn">Aggiungi</button>
-  </div>`;
-  const input = document.getElementById('newCatInput');
-  input.focus();
-  function commit(){
-    const val = input.value.trim();
-    if(!val) return;
-    const arr = catSettingsTab==='uscita' ? DB.categorieUscite : DB.categorieEntrate;
-    if(arr.includes(val)){ toast('Categoria già esistente'); return; }
-    arr.push(val); DB.sottocategorie[val]=[];
-    saveDB(); toast('Categoria aggiunta');
-    catAddingNew = false;
-    catExpandedCat = val;
-    refreshCategorieModal();
+    if(catAddingNew){
+      const input = document.getElementById('newCatInput');
+      input.focus();
+      function commit(){
+        const val = input.value.trim();
+        if(!val) return;
+        const arr = catSettingsTab==='uscita' ? DB.categorieUscite : DB.categorieEntrate;
+        if(arr.includes(val)){ toast('Categoria già esistente'); return; }
+        arr.push(val); DB.sottocategorie[val]=[];
+        saveDB(); toast('Categoria aggiunta');
+        catAddingNew = false; catExpandedCat = val;
+        refreshCategorieModal();
+      }
+      input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
+      document.getElementById('addCatBtn').onclick = commit;
+    } else {
+      document.getElementById('catAddChip').onclick = ()=>{ catExpandedCat=null; catAddingNew=true; renderCatCardList(); };
+    }
   }
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
-  document.getElementById('addCatBtn').onclick = commit;
+
+  wireCardDragDrop(listEl, list, ()=>renderCatCardList());
 }
 
-function renderCatExpandPanel(){
-  const el = document.getElementById('catExpandPanel');
-  const cat = catExpandedCat;
-  if(!cat){ el.innerHTML=''; return; }
-  const tipo = catSettingsTab;
+function renderCatCardHtml(cat){
+  const isExp = catExpandedCat===cat;
   const isAbbonamenti = cat==='Abbonamenti';
-  el.innerHTML = `
-    <div class="chip-expand-panel">
-      <div class="field" style="margin-bottom:12px;"><label>Nome</label><input type="text" id="ceNome" value="${esc(cat)}"></div>
-      <label style="display:flex;align-items:center;gap:8px;margin:0 0 16px;font-size:12.5px;color:var(--text-dim);cursor:pointer;">
-        <input type="checkbox" id="ceCascade" checked style="width:auto;"> Aggiorna anche i movimenti già registrati con il nuovo nome
-      </label>
-      <div class="field-row-2col" style="margin-bottom:16px;">
-        <div class="field"><label>Colore</label>
-          <div class="cat-color-row" id="ceColorRow">${ETICHETTA_COLOR_PALETTE.map(col=>`<button type="button" class="cat-color-swatch ${col.toLowerCase()===categoryColor(cat).toLowerCase()?'active':''}" data-color="${col}" style="background:${col};" title="${col}"></button>`).join('')}</div>
-        </div>
-        <div class="field"><label>Icona</label>
-          <div class="cat-icon-row" id="ceIconRow">${CATEGORY_ICON_SET.map(ic=>`<button type="button" class="cat-icon-swatch ${ic===categoryIcon(cat)?'active':''}" data-icon="${ic}" title="${ic}">${ico(ic,15)}</button>`).join('')}</div>
-        </div>
+  const subs = isAbbonamenti ? abbonamentiSottocategorie() : (DB.sottocategorie[cat]||[]);
+  const head = `<div class="card-item-head">
+      ${catReorderMode?`<span class="reorder-handle">⠿</span>`:''}
+      <span class="card-item-icon" style="background:${categoryColor(cat)};">${ico(categoryIcon(cat),12)}</span>
+      <span class="card-item-name">${esc(cat)}</span>
+      <span class="card-item-count">${subs.length}</span>
+      ${catReorderMode?'':`<span class="card-item-chev">${ico('chevronRight',14)}</span>`}
+    </div>`;
+  if(!isExp){
+    return `<div class="card-item ${catReorderMode?'reorder-row':''}" data-key="${esc(cat)}" draggable="${catReorderMode?'true':'false'}">${head}</div>`;
+  }
+  return `<div class="card-item expanded" data-key="${esc(cat)}">
+    ${head}
+    <div class="card-item-expand">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+        <label style="font-size:11.5px; color:var(--text-dim); font-weight:600; white-space:nowrap; flex-shrink:0;">Nome</label>
+        <input type="text" id="ceNome" value="${esc(cat)}" style="flex:1; min-width:100px;">
+        <div class="cat-color-row" id="ceColorRow" style="padding:0; flex-shrink:0;">${ETICHETTA_COLOR_PALETTE.map(col=>`<button type="button" class="cat-color-swatch ${col.toLowerCase()===categoryColor(cat).toLowerCase()?'active':''}" data-color="${col}" style="background:${col};" title="${col}"></button>`).join('')}</div>
+        <div class="cat-icon-row" id="ceIconRow" style="padding:0; border-bottom:none; margin-bottom:0; flex-shrink:0;">${CATEGORY_ICON_SET.map(ic=>`<button type="button" class="cat-icon-swatch ${ic===categoryIcon(cat)?'active':''}" data-icon="${ic}" title="${ic}">${ico(ic,15)}</button>`).join('')}</div>
       </div>
-      <div class="field" style="margin-bottom:14px;">
+      <div class="field" style="margin-bottom:12px;">
         <label>Dettagli</label>
         ${isAbbonamenti ? `
           <div class="page-sub" style="margin:4px 0 10px;">Gestiti automaticamente dagli abbonamenti attivi — aggiungi, rinomina o disattiva un servizio dalla scheda Abbonamenti.</div>
           <button type="button" class="btn btn-sm" id="ceGoAbb">Vai alla scheda Abbonamenti ${ico('arrowRight')}</button>
         ` : `
           <div id="ceDettagliList"></div>
-          <div class="add-inline" style="margin-top:8px;">
+          <button type="button" class="add-link" id="ceAddDetailToggle">+ Aggiungi dettaglio</button>
+          <div id="ceNewDetailRow" style="display:none; margin-top:8px;" class="add-inline">
             <input type="text" id="ceNewDetail" placeholder="Nuovo dettaglio…">
-            <button type="button" class="btn btn-sm" id="ceAddDetail">+ Aggiungi</button>
+            <button type="button" class="btn btn-sm" id="ceAddDetail">Aggiungi</button>
           </div>
         `}
       </div>
-      <button type="button" class="btn btn-danger btn-sm" id="ceDelete">Elimina categoria</button>
-    </div>`;
+      <div style="display:flex; justify-content:flex-end;">
+        <button type="button" class="btn btn-danger btn-sm" id="ceDelete">Elimina categoria</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function wireCatExpandedCard(cardEl, cat){
+  const tipo = catSettingsTab;
+  const isAbbonamenti = cat==='Abbonamenti';
+  let dettagliReorder = false;
+
+  cardEl.querySelector('.card-item-head').onclick = ()=>{ catExpandedCat=null; renderCatCardList(); };
 
   function renderDettagli(){
     if(isAbbonamenti) return;
     const subs = DB.sottocategorie[cat]||[];
-    const listEl = document.getElementById('ceDettagliList');
-    listEl.innerHTML = subs.length ? subs.map(s=>`
-      <div class="ec-detail-row" data-sub="${esc(s)}">
+    const listEl = cardEl.querySelector('#ceDettagliList');
+    const toolbar = subs.length>1 ? `<div style="display:flex; justify-content:flex-end; margin-bottom:2px;"><button type="button" class="sort-toggle-btn ${dettagliReorder?'active':''}" id="ceDettagliSort">${ico('arrowsSort',12)} ${dettagliReorder?'Fatto':'Ordina'}</button></div>` : '';
+    listEl.innerHTML = toolbar + (subs.length ? subs.map(s=>`
+      <div class="ec-detail-row ${dettagliReorder?'reorder-row':''}" data-key="${esc(s)}" data-sub="${esc(s)}" draggable="${dettagliReorder?'true':'false'}">
+        ${dettagliReorder?`<span class="reorder-handle">⠿</span>`:''}
         <input type="text" class="ec-detail-input" value="${esc(s)}">
-        <button type="button" class="btn btn-icon btn-sm ec-detail-del" title="Elimina">${ico('trash',14)}</button>
-      </div>`).join('') : `<div class="empty-state" style="padding:10px 0;">Nessun dettaglio — aggiungine uno qui sotto.</div>`;
-    listEl.querySelectorAll('.ec-detail-input').forEach(inp=>{
-      function commit(){
-        const row = inp.closest('.ec-detail-row');
-        const oldVal = row.dataset.sub;
-        const newVal = inp.value.trim();
-        if(!newVal || newVal===oldVal){ inp.value = oldVal; return; }
+        <span class="ec-detail-del" title="Elimina">${ico('trash',13)}</span>
+      </div>`).join('') : `<div class="empty-state" style="padding:6px 0;">Nessun dettaglio.</div>`);
+    if(subs.length>1){
+      cardEl.querySelector('#ceDettagliSort').onclick = ()=>{ dettagliReorder = !dettagliReorder; renderDettagli(); };
+    }
+    if(!dettagliReorder){
+      listEl.querySelectorAll('.ec-detail-input').forEach(inp=>{
+        function commit(){
+          const row = inp.closest('.ec-detail-row');
+          const oldVal = row.dataset.sub;
+          const newVal = inp.value.trim();
+          if(!newVal || newVal===oldVal){ inp.value = oldVal; return; }
+          const arr = DB.sottocategorie[cat]||[];
+          if(arr.includes(newVal)){ toast('Dettaglio già esistente'); inp.value = oldVal; return; }
+          const idx = arr.indexOf(oldVal);
+          if(idx>-1) arr[idx] = newVal;
+          DB.movimenti.forEach(m=>{ if(m.categoria===cat && m.descrizione===oldVal) m.descrizione = newVal; });
+          saveDB(); toast('Dettaglio aggiornato');
+          renderDettagli();
+        }
+        inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); inp.blur(); } });
+        inp.addEventListener('blur', commit);
+        inp.addEventListener('mousedown', e=> e.stopPropagation());
+      });
+      listEl.querySelectorAll('.ec-detail-del').forEach(b=>b.onclick = ()=>{
+        const sub = b.closest('.ec-detail-row').dataset.sub;
         const arr = DB.sottocategorie[cat]||[];
-        if(arr.includes(newVal)){ toast('Dettaglio già esistente'); inp.value = oldVal; return; }
-        const idx = arr.indexOf(oldVal);
-        if(idx>-1) arr[idx] = newVal;
-        DB.movimenti.forEach(m=>{ if(m.categoria===cat && m.descrizione===oldVal) m.descrizione = newVal; });
-        saveDB(); toast('Dettaglio aggiornato');
-        renderDettagli(); refreshCatChipCount(cat);
-      }
-      inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); inp.blur(); } });
-      inp.addEventListener('blur', commit);
-    });
-    listEl.querySelectorAll('.ec-detail-del').forEach(b=>b.onclick = ()=>{
-      const sub = b.closest('.ec-detail-row').dataset.sub;
-      const arr = DB.sottocategorie[cat]||[];
-      const idx = arr.indexOf(sub);
-      if(idx===-1) return;
-      arr.splice(idx,1);
-      saveDB(); toast('Dettaglio eliminato'); renderDettagli(); refreshCatChipCount(cat);
-    });
+        const idx = arr.indexOf(sub);
+        if(idx===-1) return;
+        arr.splice(idx,1);
+        saveDB(); toast('Dettaglio eliminato'); renderDettagli(); refreshCatCountBadge(cardEl, cat);
+      });
+    }
+    wireCardDragDrop(listEl, DB.sottocategorie[cat]||[], ()=>{ saveDB(); renderDettagli(); }, '.ec-detail-row[draggable="true"]');
   }
   renderDettagli();
 
   if(!isAbbonamenti){
-    document.getElementById('ceAddDetail').onclick = ()=>{
-      const input = document.getElementById('ceNewDetail');
+    const toggleBtn = cardEl.querySelector('#ceAddDetailToggle');
+    const newRow = cardEl.querySelector('#ceNewDetailRow');
+    toggleBtn.onclick = ()=>{
+      newRow.style.display = newRow.style.display==='none' ? 'flex' : 'none';
+      if(newRow.style.display==='flex') cardEl.querySelector('#ceNewDetail').focus();
+    };
+    cardEl.querySelector('#ceAddDetail').onclick = ()=>{
+      const input = cardEl.querySelector('#ceNewDetail');
       const val = input.value.trim();
       if(!val) return;
       DB.sottocategorie[cat] = DB.sottocategorie[cat]||[];
       if(DB.sottocategorie[cat].includes(val)){ toast('Dettaglio già esistente'); return; }
       DB.sottocategorie[cat].push(val);
-      saveDB(); input.value=''; renderDettagli(); refreshCatChipCount(cat);
+      saveDB(); input.value=''; renderDettagli(); refreshCatCountBadge(cardEl, cat);
     };
-    document.getElementById('ceNewDetail').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); document.getElementById('ceAddDetail').click(); } });
+    cardEl.querySelector('#ceNewDetail').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); cardEl.querySelector('#ceAddDetail').click(); } });
   } else {
-    document.getElementById('ceGoAbb').onclick = ()=>{ closeModal(); switchView('abbonamenti'); };
+    cardEl.querySelector('#ceGoAbb').onclick = ()=>{ closeModal(); switchView('abbonamenti'); };
   }
 
-  const ceColorRow = document.getElementById('ceColorRow');
-  const ceIconRow = document.getElementById('ceIconRow');
+  const ceColorRow = cardEl.querySelector('#ceColorRow');
+  const ceIconRow = cardEl.querySelector('#ceIconRow');
   ceColorRow.querySelectorAll('.cat-color-swatch').forEach(b=>b.onclick = ()=>{
     if(!ceColorRow.classList.contains('expanded')){ ceColorRow.classList.add('expanded'); return; }
     DB.categorieColori[cat] = b.dataset.color;
@@ -8132,13 +8268,14 @@ function renderCatExpandPanel(){
     saveDB(); toast('Icona aggiornata'); refreshCategorieModal();
   });
 
-  const nomeInput = document.getElementById('ceNome');
-  function commitNome(){
+  const nomeInput = cardEl.querySelector('#ceNome');
+  nomeInput.addEventListener('mousedown', e=> e.stopPropagation());
+  async function commitNome(){
     const nuovoNome = nomeInput.value.trim();
     if(!nuovoNome || nuovoNome===cat){ nomeInput.value = cat; return; }
     const arr = tipo==='uscita' ? DB.categorieUscite : DB.categorieEntrate;
     if(arr.includes(nuovoNome)){ toast('Esiste già una categoria con questo nome'); nomeInput.value = cat; return; }
-    const doCascade = document.getElementById('ceCascade').checked;
+    const doCascade = await customConfirm(`Vuoi aggiornare anche i movimenti già registrati con il nuovo nome "${nuovoNome}"?`);
     const idx = arr.indexOf(cat);
     if(idx>-1) arr[idx] = nuovoNome;
     if(DB.sottocategorie[cat]!==undefined){ DB.sottocategorie[nuovoNome] = DB.sottocategorie[cat]; delete DB.sottocategorie[cat]; }
@@ -8152,7 +8289,7 @@ function renderCatExpandPanel(){
   nomeInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); nomeInput.blur(); } });
   nomeInput.addEventListener('blur', commitNome);
 
-  document.getElementById('ceDelete').onclick = async ()=>{
+  cardEl.querySelector('#ceDelete').onclick = async ()=>{
     if(!(await customConfirm(`Eliminare la categoria "${cat}"? I movimenti già registrati non verranno modificati.`, {danger:true, okLabel:'Elimina'}))) return;
     const arr = tipo==='uscita' ? DB.categorieUscite : DB.categorieEntrate;
     const idx = arr.indexOf(cat);
@@ -8163,58 +8300,65 @@ function renderCatExpandPanel(){
     refreshCategorieModal();
   };
 }
+function refreshCatCountBadge(cardEl, cat){
+  const subs = cat==='Abbonamenti' ? abbonamentiSottocategorie() : (DB.sottocategorie[cat]||[]);
+  const badge = cardEl.querySelector('.card-item-count');
+  if(badge) badge.textContent = subs.length;
+}
 
-/* ---- Drag & drop generico per i chip a flusso libero (Categorie, Metodi Pagamento, Categorie Abbonamenti) ---- */
-let chipDragInfo = null;
-function wireChipDragDrop(flowEl, arr, afterReorder){
-  flowEl.querySelectorAll('.chip-item[draggable="true"]').forEach(item=>{
+/* ---- Drag & drop generico verticale (categorie, metodi, categorie abbonamenti, dettagli) ---- */
+function wireCardDragDrop(listEl, arr, afterReorder, itemSelector){
+  itemSelector = itemSelector || '.card-item[draggable="true"]';
+  listEl.querySelectorAll(itemSelector).forEach(item=>{
     const key = item.dataset.key;
     item.addEventListener('dragstart', e=>{
-      chipDragInfo = key;
+      cardDragInfo = key;
       item.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', key);
     });
     item.addEventListener('dragend', ()=>{
       item.classList.remove('dragging');
-      flowEl.querySelectorAll('.chip-item').forEach(x=>x.classList.remove('drag-over'));
-      chipDragInfo = null;
+      listEl.querySelectorAll(itemSelector).forEach(x=>x.classList.remove('drag-over-top','drag-over-bottom'));
+      cardDragInfo = null;
     });
     item.addEventListener('dragover', e=>{
-      if(!chipDragInfo || chipDragInfo===key) return;
+      if(!cardDragInfo || cardDragInfo===key) return;
       e.preventDefault();
-      item.classList.add('drag-over');
-    });
-    item.addEventListener('dragleave', ()=> item.classList.remove('drag-over'));
-    item.addEventListener('drop', e=>{
-      if(!chipDragInfo || chipDragInfo===key) return;
-      e.preventDefault();
-      item.classList.remove('drag-over');
       const rect = item.getBoundingClientRect();
-      const before = (e.clientX - rect.left) < rect.width/2;
+      const before = (e.clientY - rect.top) < rect.height/2;
+      item.classList.toggle('drag-over-top', before);
+      item.classList.toggle('drag-over-bottom', !before);
+    });
+    item.addEventListener('dragleave', ()=>{ item.classList.remove('drag-over-top','drag-over-bottom'); });
+    item.addEventListener('drop', e=>{
+      if(!cardDragInfo || cardDragInfo===key) return;
+      e.preventDefault();
+      const rect = item.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height/2;
       let toIdx = arr.indexOf(key);
       if(!before) toIdx++;
-      const fromIdx = arr.indexOf(chipDragInfo);
+      const fromIdx = arr.indexOf(cardDragInfo);
       if(fromIdx>-1 && toIdx>-1){
         arr.splice(fromIdx,1);
         if(fromIdx<toIdx) toIdx--;
-        arr.splice(toIdx,0,chipDragInfo);
+        arr.splice(toIdx,0,cardDragInfo);
         saveDB(); afterReorder();
       }
     });
   });
 }
+let cardDragInfo = null;
 
 
-/* ---- Gestione Categorie Abbonamenti: stesso layout/drag&drop dei Metodi di Pagamento (senza icone) ---- */
+/* ---- Gestione Categorie Abbonamenti: card con pallino colore a sinistra, si espande sul posto ---- */
 let catAbbExpanded = null;
 let catAbbAdding = false;
+let catAbbReorderMode = false;
 function renderCategorieAbbModalBody(){
   return `
     <div class="page-sub" style="margin-bottom:14px;">Ogni categoria ha un colore stabile, usato come bordo colorato nelle card e nell'elenco Abbonamenti.</div>
-    <div class="chip-flow" id="categorieAbbChipFlow"></div>
-    <div id="categorieAbbAddInline"></div>
-    <div id="categorieAbbExpandPanel"></div>`;
+    <div class="card-list" id="categorieAbbCardList"></div>`;
 }
 function openCategorieAbbModal(){
   const html = `
@@ -8223,6 +8367,7 @@ function openCategorieAbbModal(){
     <div class="modal-foot"><button class="btn" id="cabmCloseBtn">Chiudi</button></div>
   `;
   openSettingsPanel(html);
+  document.getElementById('modalBox').classList.add('modal-narrow');
   document.getElementById('modalBox').dataset.kind = 'categorieabb';
   const close = ()=>{ closeModal(); renderImpostazioni(); };
   document.getElementById('cabmClose').onclick = close;
@@ -8237,68 +8382,78 @@ function refreshCategorieAbbModal(){
   } else if(currentView==='impostazioni'){ renderImpostazioni(); }
   if(currentView==='abbonamenti') renderAbbonamenti();
 }
-function wireCategorieAbbSection(){
-  const list = DB.categorieAbbonamenti;
-  const flowEl = document.getElementById('categorieAbbChipFlow');
-  flowEl.innerHTML = list.map(c=>`<div class="chip-item ${catAbbExpanded===c?'active':''}" data-key="${esc(c)}" draggable="true">
-      <span class="chip-icon-dot" style="background:${categoriaAbbColor(c)};"></span>
-      <span class="chip-name">${esc(c)}</span>
-    </div>`).join('') + `<button type="button" class="chip-add" id="categorieAbbAddChip">${ico('plus',14)} Categoria</button>`;
+function wireCategorieAbbSection(){ renderCatAbbCardList(); }
 
-  flowEl.querySelectorAll('.chip-item').forEach(chip=>{
-    chip.onclick = ()=>{
-      const c = chip.dataset.key;
-      catAbbAdding = false;
-      catAbbExpanded = (catAbbExpanded===c) ? null : c;
-      flowEl.querySelectorAll('.chip-item').forEach(x=>x.classList.toggle('active', x.dataset.key===catAbbExpanded));
-      renderCategorieAbbAddInline();
-      renderCategorieAbbExpandPanel();
-    };
-  });
-  document.getElementById('categorieAbbAddChip').onclick = ()=>{
-    catAbbExpanded = null;
-    catAbbAdding = !catAbbAdding;
-    flowEl.querySelectorAll('.chip-item').forEach(x=>x.classList.remove('active'));
-    renderCategorieAbbAddInline();
-    renderCategorieAbbExpandPanel();
+function renderCatAbbCardList(){
+  const list = DB.categorieAbbonamenti;
+  const listEl = document.getElementById('categorieAbbCardList');
+  const toolbar = list.length>1 ? `<div class="list-toolbar"><button type="button" class="sort-toggle-btn ${catAbbReorderMode?'active':''}" id="catAbbSortToggle">${ico('arrowsSort',13)} ${catAbbReorderMode?'Fatto':'Ordina'}</button></div>` : '';
+  listEl.innerHTML = toolbar + list.map(c=>renderCatAbbCardHtml(c)).join('') + (catAbbReorderMode ? '' : (catAbbAdding ? `
+    <div class="card-add-inline"><input type="text" id="newCategoriaAbb" placeholder="Nuova categoria abbonamento…"><button class="btn btn-sm" id="addCategoriaAbb">Aggiungi</button></div>
+  ` : `<button type="button" class="card-add" id="categorieAbbAddChip">${ico('plus',14)} Aggiungi categoria</button>`));
+
+  if(list.length>1) document.getElementById('catAbbSortToggle').onclick = ()=>{
+    catAbbReorderMode = !catAbbReorderMode;
+    if(catAbbReorderMode){ catAbbExpanded=null; catAbbAdding=false; }
+    renderCatAbbCardList();
   };
 
-  wireChipDragDrop(flowEl, list, refreshCategorieAbbModal);
+  if(!catAbbReorderMode){
+    listEl.querySelectorAll('.card-item[data-key]:not(.expanded)').forEach(card=>{
+      card.onclick = ()=>{ catAbbAdding=false; catAbbExpanded = card.dataset.key; renderCatAbbCardList(); };
+    });
 
-  renderCategorieAbbAddInline();
-  renderCategorieAbbExpandPanel();
-}
-function renderCategorieAbbAddInline(){
-  const el = document.getElementById('categorieAbbAddInline');
-  if(!catAbbAdding){ el.innerHTML=''; return; }
-  el.innerHTML = `<div class="chip-add-inline">
-    <input type="text" id="newCategoriaAbb" placeholder="Nuova categoria abbonamento…">
-    <button class="btn btn-sm" id="addCategoriaAbb">Aggiungi</button>
-  </div>`;
-  const input = document.getElementById('newCategoriaAbb');
-  input.focus();
-  function commit(){
-    const val = input.value.trim();
-    if(!val) return;
-    if(DB.categorieAbbonamenti.includes(val)){ toast('Categoria già esistente'); return; }
-    DB.categorieAbbonamenti.push(val); saveDB(); toast('Categoria aggiunta');
-    catAbbAdding = false; catAbbExpanded = val;
-    refreshCategorieAbbModal();
+    const expandedCard = listEl.querySelector('.card-item.expanded');
+    if(expandedCard) wireCatAbbExpandedCard(expandedCard, expandedCard.dataset.key);
+
+    if(catAbbAdding){
+      const input = document.getElementById('newCategoriaAbb');
+      input.focus();
+      function commit(){
+        const val = input.value.trim();
+        if(!val) return;
+        if(DB.categorieAbbonamenti.includes(val)){ toast('Categoria già esistente'); return; }
+        DB.categorieAbbonamenti.push(val); saveDB(); toast('Categoria aggiunta');
+        catAbbAdding = false; catAbbExpanded = val;
+        refreshCategorieAbbModal();
+      }
+      input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
+      document.getElementById('addCategoriaAbb').onclick = commit;
+    } else {
+      document.getElementById('categorieAbbAddChip').onclick = ()=>{ catAbbExpanded=null; catAbbAdding=true; renderCatAbbCardList(); };
+    }
   }
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
-  document.getElementById('addCategoriaAbb').onclick = commit;
-}
-function renderCategorieAbbExpandPanel(){
-  const el = document.getElementById('categorieAbbExpandPanel');
-  const c = catAbbExpanded;
-  if(!c){ el.innerHTML=''; return; }
-  el.innerHTML = `
-    <div class="chip-expand-panel">
-      <div class="field" style="margin-bottom:16px;"><label>Nome</label><input type="text" id="cabNome" value="${esc(c)}"></div>
-      <button type="button" class="btn btn-danger btn-sm" id="cabDelete">Elimina categoria</button>
-    </div>`;
 
-  const nomeInput = document.getElementById('cabNome');
+  wireCardDragDrop(listEl, list, ()=>renderCatAbbCardList());
+}
+
+function renderCatAbbCardHtml(c){
+  const isExp = catAbbExpanded===c;
+  const head = `<div class="card-item-head">
+      ${catAbbReorderMode?`<span class="reorder-handle">⠿</span>`:''}
+      <span class="card-item-icon" style="background:${categoriaAbbColor(c)};"></span>
+      <span class="card-item-name">${esc(c)}</span>
+      ${catAbbReorderMode?'':`<span class="card-item-chev">${ico('chevronRight',14)}</span>`}
+    </div>`;
+  if(!isExp){
+    return `<div class="card-item ${catAbbReorderMode?'reorder-row':''}" data-key="${esc(c)}" draggable="${catAbbReorderMode?'true':'false'}">${head}</div>`;
+  }
+  return `<div class="card-item expanded" data-key="${esc(c)}">
+    ${head}
+    <div class="card-item-expand">
+      <div class="field" style="margin-bottom:14px;"><label>Nome</label><input type="text" id="cabNome" value="${esc(c)}"></div>
+      <div style="display:flex; justify-content:flex-end;">
+        <button type="button" class="btn btn-danger btn-sm" id="cabDelete">Elimina categoria</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function wireCatAbbExpandedCard(cardEl, c){
+  cardEl.querySelector('.card-item-head').onclick = ()=>{ catAbbExpanded=null; renderCatAbbCardList(); };
+
+  const nomeInput = cardEl.querySelector('#cabNome');
+  nomeInput.addEventListener('mousedown', e=> e.stopPropagation());
   function commitNome(){
     const nuovo = nomeInput.value.trim();
     if(!nuovo || nuovo===c){ nomeInput.value = c; return; }
@@ -8314,7 +8469,7 @@ function renderCategorieAbbExpandPanel(){
   nomeInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); nomeInput.blur(); } });
   nomeInput.addEventListener('blur', commitNome);
 
-  document.getElementById('cabDelete').onclick = async ()=>{
+  cardEl.querySelector('#cabDelete').onclick = async ()=>{
     const idx = DB.categorieAbbonamenti.indexOf(c);
     if(idx===-1) return;
     if(DB.categorieAbbonamenti.length<=1){ toast('Deve restare almeno una categoria'); return; }
@@ -8328,15 +8483,14 @@ function renderCategorieAbbExpandPanel(){
   };
 }
 
-/* ---- Gestione Metodi di Pagamento: stesso layout/drag&drop delle Categorie ---- */
+/* ---- Gestione Metodi di Pagamento: card con icona a sinistra, si espande sul posto ---- */
 let metodoExpanded = null;
 let metodoAdding = false;
+let metodoReorderMode = false;
 function renderMetodiModalBody(){
   return `
     <div class="page-sub" style="margin-bottom:14px;">Clicca un metodo per rinominarlo, cambiarne l'icona o eliminarlo.</div>
-    <div class="chip-flow" id="metodiChipFlow"></div>
-    <div id="metodiAddInline"></div>
-    <div id="metodiExpandPanel"></div>`;
+    <div class="card-list" id="metodiCardList"></div>`;
 }
 function openMetodiModal(){
   const html = `
@@ -8345,6 +8499,7 @@ function openMetodiModal(){
     <div class="modal-foot"><button class="btn" id="metmCloseBtn">Chiudi</button></div>
   `;
   openSettingsPanel(html);
+  document.getElementById('modalBox').classList.add('modal-narrow');
   document.getElementById('modalBox').dataset.kind = 'metodi';
   const close = ()=>{ closeModal(); renderImpostazioni(); };
   document.getElementById('metmClose').onclick = close;
@@ -8358,81 +8513,88 @@ function refreshMetodiModal(){
     wireMetodiSection();
   } else if(currentView==='impostazioni'){ renderImpostazioni(); }
 }
-function wireMetodiSection(){
-  const list = DB.metodiPagamento;
-  const flowEl = document.getElementById('metodiChipFlow');
-  flowEl.innerHTML = list.map(m=>{
-    const icon = metodoIconHtml(m,'',18);
-    return `<div class="chip-item ${metodoExpanded===m?'active':''}" data-key="${esc(m)}" draggable="true">
-      ${icon ? `<span style="display:flex;">${icon}</span>` : ''}
-      <span class="chip-name">${esc(m)}</span>
-    </div>`;
-  }).join('') + `<button type="button" class="chip-add" id="metodoAddChip">${ico('plus',14)} Metodo</button>`;
+function wireMetodiSection(){ renderMetodoCardList(); }
 
-  flowEl.querySelectorAll('.chip-item').forEach(chip=>{
-    chip.onclick = ()=>{
-      const m = chip.dataset.key;
-      metodoAdding = false;
-      metodoExpanded = (metodoExpanded===m) ? null : m;
-      flowEl.querySelectorAll('.chip-item').forEach(x=>x.classList.toggle('active', x.dataset.key===metodoExpanded));
-      renderMetodoAddInline();
-      renderMetodoExpandPanel();
-    };
-  });
-  document.getElementById('metodoAddChip').onclick = ()=>{
-    metodoExpanded = null;
-    metodoAdding = !metodoAdding;
-    flowEl.querySelectorAll('.chip-item').forEach(x=>x.classList.remove('active'));
-    renderMetodoAddInline();
-    renderMetodoExpandPanel();
+function renderMetodoCardList(){
+  const list = DB.metodiPagamento;
+  const listEl = document.getElementById('metodiCardList');
+  const toolbar = list.length>1 ? `<div class="list-toolbar"><button type="button" class="sort-toggle-btn ${metodoReorderMode?'active':''}" id="metodoSortToggle">${ico('arrowsSort',13)} ${metodoReorderMode?'Fatto':'Ordina'}</button></div>` : '';
+  listEl.innerHTML = toolbar + list.map(m=>renderMetodoCardHtml(m)).join('') + (metodoReorderMode ? '' : (metodoAdding ? `
+    <div class="card-add-inline"><input type="text" id="newMetodo" placeholder="Nuovo metodo di pagamento…"><button class="btn btn-sm" id="addMetodo">Aggiungi</button></div>
+  ` : `<button type="button" class="card-add" id="metodoAddChip">${ico('plus',14)} Aggiungi metodo</button>`));
+
+  if(list.length>1) document.getElementById('metodoSortToggle').onclick = ()=>{
+    metodoReorderMode = !metodoReorderMode;
+    if(metodoReorderMode){ metodoExpanded=null; metodoAdding=false; }
+    renderMetodoCardList();
   };
 
-  wireChipDragDrop(flowEl, list, refreshMetodiModal);
+  if(!metodoReorderMode){
+    listEl.querySelectorAll('.card-item[data-key]:not(.expanded)').forEach(card=>{
+      card.onclick = ()=>{ metodoAdding=false; metodoExpanded = card.dataset.key; renderMetodoCardList(); };
+    });
 
-  renderMetodoAddInline();
-  renderMetodoExpandPanel();
-}
-function renderMetodoAddInline(){
-  const el = document.getElementById('metodiAddInline');
-  if(!metodoAdding){ el.innerHTML=''; return; }
-  el.innerHTML = `<div class="chip-add-inline">
-    <input type="text" id="newMetodo" placeholder="Nuovo metodo di pagamento…">
-    <button class="btn btn-sm" id="addMetodo">Aggiungi</button>
-  </div>`;
-  const input = document.getElementById('newMetodo');
-  input.focus();
-  function commit(){
-    const val = input.value.trim();
-    if(!val) return;
-    if(DB.metodiPagamento.includes(val)){ toast('Metodo già esistente'); return; }
-    DB.metodiPagamento.push(val); saveDB(); toast('Metodo aggiunto');
-    metodoAdding = false; metodoExpanded = val;
-    refreshMetodiModal();
+    const expandedCard = listEl.querySelector('.card-item.expanded');
+    if(expandedCard) wireMetodoExpandedCard(expandedCard, expandedCard.dataset.key);
+
+    if(metodoAdding){
+      const input = document.getElementById('newMetodo');
+      input.focus();
+      function commit(){
+        const val = input.value.trim();
+        if(!val) return;
+        if(DB.metodiPagamento.includes(val)){ toast('Metodo già esistente'); return; }
+        DB.metodiPagamento.push(val); saveDB(); toast('Metodo aggiunto');
+        metodoAdding = false; metodoExpanded = val;
+        refreshMetodiModal();
+      }
+      input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
+      document.getElementById('addMetodo').onclick = commit;
+    } else {
+      document.getElementById('metodoAddChip').onclick = ()=>{ metodoExpanded=null; metodoAdding=true; renderMetodoCardList(); };
+    }
   }
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
-  document.getElementById('addMetodo').onclick = commit;
+
+  wireCardDragDrop(listEl, list, ()=>renderMetodoCardList());
 }
-function renderMetodoExpandPanel(){
-  const el = document.getElementById('metodiExpandPanel');
-  const m = metodoExpanded;
-  if(!m){ el.innerHTML=''; return; }
+
+function renderMetodoCardHtml(m){
+  const isExp = metodoExpanded===m;
+  const icon = metodoIconHtml(m,'',13);
+  const head = `<div class="card-item-head">
+      ${metodoReorderMode?`<span class="reorder-handle">⠿</span>`:''}
+      <span class="card-item-icon" style="background:${icon?'transparent':'var(--surface-3)'};">${icon}</span>
+      <span class="card-item-name">${esc(m)}</span>
+      ${metodoReorderMode?'':`<span class="card-item-chev">${ico('chevronRight',14)}</span>`}
+    </div>`;
+  if(!isExp){
+    return `<div class="card-item ${metodoReorderMode?'reorder-row':''}" data-key="${esc(m)}" draggable="${metodoReorderMode?'true':'false'}">${head}</div>`;
+  }
   const hasCustomIcon = !!(DB.metodiIcone && DB.metodiIcone[m]);
-  el.innerHTML = `
-    <div class="chip-expand-panel">
-      <div class="field" style="margin-bottom:16px;"><label>Nome</label><input type="text" id="metNome" value="${esc(m)}"></div>
-      <div class="field">
+  return `<div class="card-item expanded" data-key="${esc(m)}">
+    ${head}
+    <div class="card-item-expand">
+      <div class="field" style="margin-bottom:14px;"><label>Nome</label><input type="text" id="metNome" value="${esc(m)}"></div>
+      <div class="field" style="margin-bottom:14px;">
         <label>Icona</label>
-        <div style="display:flex; align-items:center; gap:12px;">
-          <span class="mm-icon-preview">${metodoIconHtml(m,'',30)}</span>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <input type="file" id="metUploadInput" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none;">
           <button type="button" class="btn btn-sm" id="metUploadBtn">${ico('upload',14)} Carica icona</button>
           ${hasCustomIcon?`<button type="button" class="btn btn-sm" id="metResetIcon">${ico('rotateCcw',14)} Ripristina automatica</button>`:''}
         </div>
       </div>
-      <div style="margin-top:16px;"><button type="button" class="btn btn-danger btn-sm" id="metDelete">Elimina metodo</button></div>
-    </div>`;
+      <div style="display:flex; justify-content:flex-end;">
+        <button type="button" class="btn btn-danger btn-sm" id="metDelete">Elimina metodo</button>
+      </div>
+    </div>
+  </div>`;
+}
 
-  const nomeInput = document.getElementById('metNome');
+function wireMetodoExpandedCard(cardEl, m){
+  cardEl.querySelector('.card-item-head').onclick = ()=>{ metodoExpanded=null; renderMetodoCardList(); };
+
+  const nomeInput = cardEl.querySelector('#metNome');
+  nomeInput.addEventListener('mousedown', e=> e.stopPropagation());
   nomeInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); nomeInput.blur(); } });
   nomeInput.addEventListener('blur', async ()=>{
     const nuovo = nomeInput.value.trim();
@@ -8449,8 +8611,8 @@ function renderMetodoExpandPanel(){
     refreshMetodiModal();
   });
 
-  document.getElementById('metUploadBtn').onclick = ()=> document.getElementById('metUploadInput').click();
-  document.getElementById('metUploadInput').onchange = (e)=>{
+  cardEl.querySelector('#metUploadBtn').onclick = ()=> cardEl.querySelector('#metUploadInput').click();
+  cardEl.querySelector('#metUploadInput').onchange = (e)=>{
     const file = e.target.files[0];
     if(!file) return;
     processMetodoIconFile(file, (dataURL, err)=>{
@@ -8459,12 +8621,13 @@ function renderMetodoExpandPanel(){
       saveDB(); toast('Icona caricata'); refreshMetodiModal();
     });
   };
-  if(hasCustomIcon) document.getElementById('metResetIcon').onclick = ()=>{
+  const resetBtn = cardEl.querySelector('#metResetIcon');
+  if(resetBtn) resetBtn.onclick = ()=>{
     delete DB.metodiIcone[m];
     saveDB(); toast('Icona personalizzata rimossa, torna quella automatica'); refreshMetodiModal();
   };
 
-  document.getElementById('metDelete').onclick = async ()=>{
+  cardEl.querySelector('#metDelete').onclick = async ()=>{
     const idx = DB.metodiPagamento.indexOf(m);
     if(idx===-1) return;
     if(!(await customConfirm(`Eliminare il metodo "${m}"? Scomparirà solo la sua icona dai movimenti: nessun movimento verrà modificato o cancellato.`, {danger:true, okLabel:'Elimina'}))) return;
@@ -9232,7 +9395,6 @@ const globalSelectObserver = new MutationObserver(mutations=>{
 
 function init(){
   loadDB();
-  refreshEtichetteDatalist();
   advanceAutoRenewals();
   gdriveInitOnLoad();
   initDashDefaultPeriod();
