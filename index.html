@@ -1576,7 +1576,7 @@ const SEED_DATA = {"movimenti":[{"data":"2025-10-01","categoria":"Abbonamenti","
 // Aggiornare questa stringa ad ogni nuova versione pubblicata su GitHub:
 // serve al controllo automatico "Nuova versione disponibile" per accorgersi
 // che è stato pubblicato un aggiornamento.
-const APP_BUILD = '2026-09-12-01';
+const APP_BUILD = '2026-09-12-02';
 const LS_KEY = 'ledger_db_v1';
 const LS_THEME = 'ledger_theme_v1';
 const LS_PRIVACY = 'ledger_privacy_v1';
@@ -6461,12 +6461,13 @@ function renderGDriveStatus(){
   if(!el) return;
   const lastSync = parseInt(localStorage.getItem(LS_GDRIVE_LAST_SYNC)||'0',10);
   const lastSyncTxt = lastSync ? new Date(lastSync).toLocaleString('it-IT') : 'mai';
-  const dotColor = { disconnesso:'#8a8f98', connesso:'#49D9A8', sync:'#5FA8FF', riconnetti:'#F5B95C', errore:'#FF7A66' }[gdriveStatus] || '#8a8f98';
+  const dotColor = { disconnesso:'#8a8f98', attesa:'#8a8f98', connesso:'#49D9A8', sync:'#5FA8FF', riconnetti:'#F5B95C', errore:'#FF7A66' }[gdriveStatus] || '#8a8f98';
   const map = {
     disconnesso: 'Non connesso',
+    attesa: 'Ultimo sync: '+lastSyncTxt+' — premi "Sincronizza dati" per aggiornare',
     connesso: 'Connesso — ultimo sync: '+lastSyncTxt,
     sync: 'Sincronizzazione in corso…',
-    riconnetti: 'Sessione scaduta — clicca "Connetti" per riautorizzare',
+    riconnetti: 'Sessione scaduta — premi "Sincronizza dati" per riautorizzare',
     errore: 'Errore di sincronizzazione — riprova (controlla il Client ID e i permessi)'
   };
   const syncIcon = gdriveStatus==='sync' ? ico('refreshCw',13) : '';
@@ -6474,13 +6475,10 @@ function renderGDriveStatus(){
 }
 function gdriveInitOnLoad(){
   if(!gdriveIsConnected()) return;
-  gdriveSetStatus('sync');
-  const tryInit = ()=>{
-    const tc = gdriveEnsureTokenClient();
-    if(tc) gdriveSilentReconnect();
-    else setTimeout(tryInit, 300);
-  };
-  tryInit();
+  // Niente richiesta automatica di accesso a Google all'avvio: evitiamo così
+  // il popup di login ad ogni apertura dell'app. La sincronizzazione parte
+  // solo quando l'utente preme "Sincronizza dati" in Impostazioni.
+  gdriveSetStatus('attesa');
 }
 
 /* ---- Impostazioni: wiring sezione Google Drive ---- */
@@ -9175,7 +9173,7 @@ function renderImpostazioni(){
       <div class="field" style="margin-top:12px;"><label>Client ID Google (da Google Cloud Console)</label><input type="text" id="gdriveClientId" value="${esc(gdriveClientId())}" placeholder="xxxxxxxxxx.apps.googleusercontent.com"></div>
       <div class="settings-actions" style="margin-top:8px;">
         <button class="btn btn-sm" id="gdriveSaveClientId">Salva Client ID</button>
-        <button class="btn btn-primary btn-sm" id="gdriveConnectBtn">${ico('link')} Connetti Google Drive</button>
+        <button class="btn btn-primary btn-sm" id="gdriveConnectBtn">${ico('link')} ${gdriveIsConnected() ? 'Sincronizza dati' : 'Connetti Google Drive'}</button>
         ${gdriveIsConnected() ? '<button class="btn btn-danger btn-sm" id="gdriveDisconnectBtn">Disconnetti</button>' : ''}
       </div>
       <div id="gdriveStatusLine" class="page-sub" style="margin-top:12px; font-weight:600;"></div>
