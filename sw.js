@@ -4,7 +4,7 @@
 // IMPORTANTE: il browser rileva un aggiornamento dell'app SOLO se il contenuto di questo file
 // cambia byte per byte rispetto a quello già installato (non basta modificare index.html).
 // Cambiare questo numero a ogni pubblicazione di una nuova versione dell'app.
-const SW_VERSION = 1;
+const SW_VERSION = 2;
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => self.clients.claim());
 self.addEventListener('fetch', e => { /* passthrough */ });
