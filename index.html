@@ -323,6 +323,17 @@ button .ic-svg, .btn .ic-svg{vertical-align:-3px;}
   z-index:0; pointer-events:none; opacity:0;
   transition:transform .42s cubic-bezier(.16,.8,.24,1), opacity .2s ease;
 }
+/* Pulsante flottante "Nuovo movimento": visibile solo nella scheda Movimenti (classe .show
+   aggiunta/rimossa da switchView), sollevato sopra la pillola di navigazione. Toni discreti,
+   coerenti con le superfici dell'app, non un cerchio pieno a tinta accesa. */
+.mobile-fab{
+  display:none; position:fixed; right:18px; bottom:calc(84px + env(safe-area-inset-bottom,0px)); z-index:65;
+  width:44px; height:44px; border-radius:50%; align-items:center; justify-content:center;
+  background:var(--surface-3); color:var(--accent,var(--mint)); border:1px solid var(--border); cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.22); transition:transform .15s ease;
+}
+.mobile-fab.show{display:flex;}
+.mobile-fab:active{transform:scale(.93);}
 
 
 main{margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%; padding:28px 34px 60px; transition:margin-left .22s ease; height:100vh; height:100dvh; overflow-y:auto; overflow-x:hidden;}
@@ -423,16 +434,17 @@ main{margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%; padding:
 
 /* ---------- TIME SELECTOR (pills + tiles) ---------- */
 .time-selector{display:flex; flex-direction:column; gap:12px; background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); margin-bottom:20px;}
-/* Scheda Ricerca: tutti i filtri (incluso Tipo/Metodo/Importo/Etichette, prima dietro
-   "Ricerca avanzata") sono sempre visibili, distribuiti su due colonne — "Cosa" (testo/tipo/
-   metodo/importo/etichette) e "Quando" (rapidi/anni/mesi) — per non sprecare lo spazio
-   orizzontale su schermi larghi. Su mobile le colonne tornano a impilarsi (media query sotto). */
-.search-filters-grid{display:grid; grid-template-columns:1.25fr 1fr; gap:8px 28px; align-items:start;}
+/* Scheda Ricerca: i campi base (Anni/Mesi/Categoria/Dettaglio/Note) sono sempre visibili, distribuiti
+   su due colonne — "Cosa" (testo) e "Quando" (anni/mesi) — per non sprecare lo spazio orizzontale su
+   schermi larghi. Tipo/Metodo/Importo/Etichette vivono invece dentro il pannello pieghevole "Ricerca
+   avanzata" più sotto. Su mobile le colonne tornano a impilarsi (media query sotto). */
+.search-filters-grid{display:grid; grid-template-columns:1fr 1.25fr; gap:8px 28px; align-items:start;}
 .search-col{display:flex; flex-direction:column; gap:12px; min-width:0;}
 .search-col-what .time-selector-row input[type="text"],
 .search-col-what .time-selector-row select{flex:1; min-width:0;}
 @media(max-width:880px){ .search-filters-grid{grid-template-columns:1fr; gap:18px;} }
-.time-selector-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+.time-selector-row{display:flex; align-items:center; gap:10px; flex-wrap:nowrap;}
+.time-selector-row > .amount-range-group, .time-selector-row > .etichetta-field{flex:1; min-width:0;}
 .time-selector-row:first-child{flex-wrap:nowrap;}
 .time-selector-label{font-size:10.5px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; width:72px; flex-shrink:0;}
 .amount-range-group{display:flex; align-items:center; gap:8px; margin-left:8px;}
@@ -445,11 +457,13 @@ main{margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%; padding:
    scorrimento nascosto — quindi vanno a capo invece di scorrere orizzontalmente. */
 #searchYearPills{flex:1; min-width:0; flex-wrap:wrap;}
 #yearPills .pill, #searchYearPills .pill{flex-shrink:0;}
-.search-filters-foot{display:flex; justify-content:flex-end; padding-top:12px; margin-top:2px; border-top:1px solid var(--border-soft);}
+.search-filters-foot{display:flex; justify-content:flex-end; padding-top:4px; margin-top:2px;}
 .pill{background:none; border:none; color:var(--text-dim); padding:7px 15px; border-radius:999px; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .15s; user-select:none;}
 .pill:hover{color:var(--text);}
 .pill.active{background:var(--surface-3); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.15); font-weight:700;}
-.month-grid{display:grid; grid-template-columns:repeat(12,1fr); gap:2px; flex:1; min-width:260px; max-width:560px; background:var(--surface-2); border:1px solid var(--border); border-radius:14px; padding:3px;}
+/* Griglia mesi: 6 colonne su due righe (celle più larghe, testo del mese più leggibile),
+   uniforme tra mobile e desktop. */
+.month-grid{display:grid; grid-template-columns:repeat(6,1fr); gap:2px; flex:1; min-width:220px; max-width:340px; background:var(--surface-2); border:1px solid var(--border); border-radius:14px; padding:3px;}
 .month-tile{background:none; border:none; color:var(--text-dim); padding:7px 2px; border-radius:11px; font-size:11.5px; font-weight:600; cursor:pointer; text-align:center; transition:all .15s; user-select:none;}
 .month-tile:hover{color:var(--text);}
 .month-tile.active{background:var(--surface-3); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.15); font-weight:700;}
@@ -466,6 +480,18 @@ main{margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%; padding:
 .icon-toggle-btn:hover::after{opacity:1; transform:translateX(-50%) translateY(0);}
 .time-reset-btn{display:inline-flex; align-items:center; gap:5px; background:none; border:1px dashed var(--border); color:var(--text-faint); padding:6px 13px; border-radius:8px; font-size:11.5px; font-weight:600; cursor:pointer; transition:all .15s; white-space:nowrap; margin-left:auto;}
 .time-reset-btn:hover{border-color:var(--coral); color:var(--coral);}
+
+/* ---------- RICERCA: toggle "Ricerca avanzata" ---------- */
+.search-advanced-toggle{
+  display:flex; align-items:center; gap:6px; align-self:flex-start; background:none; border:none;
+  color:var(--text-faint); font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+  cursor:pointer; padding:6px 2px; margin-top:2px;
+}
+.search-advanced-toggle:hover{ color:var(--text); }
+.search-advanced-toggle .sat-chevron{ transition:transform .15s ease; }
+.search-advanced-toggle.open .sat-chevron{ transform:rotate(180deg); }
+.search-advanced-body{ display:none; padding-top:2px; }
+.search-advanced-body.open{ display:block; }
 
 /* ---------- MOVIMENTI: accordion per anno ---------- */
 .mov-year-group{margin-bottom:14px;}
@@ -517,8 +543,10 @@ main{margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%; padding:
   /* ---------- Elenco Movimenti (mobile): stile Revolut — card per giorno, niente checkbox
      visibile, avatar categoria colorato. Tocco breve = espande i dettagli; tocco prolungato =
      entra in modalità selezione (poi basta un tocco su ogni riga per aggiungerla/toglierla). ---------- */
-  .mov-year-body .table-scroll{display:none;}
-  .mov-search-block .table-scroll{display:none;}
+  /* Qualunque tabella reflow che abbia come fratello la lista a card (mov-day-list) va nascosta
+     su mobile a favore della card: vale non solo per Movimenti/Ricerca ma anche per i popup
+     Storico Etichetta/Metodo/Fonte, che condividono la stessa coppia tabella+lista. */
+  .table-scroll:has(~ .mov-day-list){display:none;}
   .table-scroll:has(.ledger-mobile-check){display:none;}
   .mov-day-list{display:block;}
   .mov-day-block{margin-bottom:18px; animation:cardIn .3s cubic-bezier(.22,.68,0,1) both;}
@@ -526,15 +554,25 @@ main{margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%; padding:
   .mov-day-label{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--text);}
   .mov-day-total{font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--text-faint);}
   .mov-day-card{background:var(--surface); border:1px solid var(--border-soft); border-radius:16px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.04);}
-  .mov-row{
-    display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 14px; cursor:pointer;
-    border-bottom:1px solid var(--border-soft); transition:background .18s ease, transform .18s ease;
-  }
+  .mov-row{position:relative; overflow:hidden; cursor:pointer; border-bottom:1px solid var(--border-soft);}
   .mov-row:last-child{border-bottom:none;}
-  .mov-row.selected{background:var(--surface-2); transform:scale(.98);}
+  /* Layer fisso, rivelato scorrendo il contenuto verso sinistra */
+  .mov-row-swipe-actions{position:absolute; top:0; right:0; bottom:0; display:flex; align-items:stretch; z-index:0;}
+  .mov-swipe-btn{width:64px; border:none; display:flex; align-items:center; justify-content:center; color:#fff; cursor:pointer; flex-shrink:0;}
+  .mov-swipe-edit{background:var(--blue);}
+  .mov-swipe-delete{background:var(--coral);}
+  /* Layer di contenuto, quello che l'utente trascina */
+  .mov-row-content{
+    position:relative; z-index:1; background:var(--surface);
+    display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 14px;
+    transition:background .18s ease, transform .18s ease;
+  }
+  .mov-row.selected .mov-row-content{background:var(--surface-2); transform:scale(.98) !important;}
+  .mov-row.selected .mov-row-swipe-actions{display:none;}
   .mov-row-mid{flex:1; min-width:0;}
   .mov-row-title{font-size:14px; font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .mov-row-sub{font-size:11.5px; color:var(--text-faint); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .mov-row-note-ic{display:inline-flex; vertical-align:-1px; margin-left:5px; opacity:.7;}
   .mov-row-amt{font-family:'JetBrains Mono',monospace; font-size:14.5px; font-weight:800; flex-shrink:0; margin-left:auto;}
   .mov-row-amt.pos{color:var(--money-pos);}
   .mov-row-amt.neg{color:var(--coral);}
@@ -842,6 +880,18 @@ tr.imp-row-warn.imp-row-ok{background:transparent; border-left:3px solid transpa
 .mov-metodo-icon-img{display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; margin-right:7px; cursor:pointer; vertical-align:middle; border-radius:4px; object-fit:cover; box-shadow:0 0 0 1px rgba(0,0,0,.18);}
 .mm-icon-preview{display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; overflow:hidden; flex:0 0 auto;}
 .mm-icon-preview .mov-metodo-badge, .mm-icon-preview .mov-src-badge-r, .mm-icon-preview .mov-src-badge, .mm-icon-preview .mov-metodo-icon-img{width:30px; height:30px; font-size:13px; margin-right:0;}
+@media(max-width:880px){
+  /* Area toccabile allargata (~38px) per le piccole icone metodo/fonte pagamento nell'elenco
+     Movimenti, senza ingrandirne l'aspetto visivo: un ::after invisibile espande solo la zona
+     sensibile al tocco, restando sotto la soglia raccomandata di 44px ma molto più vicina. */
+  .mov-src-badge, .mov-src-badge-r, .mov-metodo-badge, .mov-metodo-icon-img{ position:relative; }
+  .mov-src-badge::after, .mov-src-badge-r::after, .mov-metodo-badge::after, .mov-metodo-icon-img::after{
+    content:''; position:absolute; inset:-9px;
+  }
+  /* Tasto "×" di rimozione etichetta: stessa logica, area di tocco più generosa senza spostare
+     il layout (padding compensato da un margine negativo di pari misura). */
+  .etichetta-chip-remove{ padding:8px; margin:-8px -8px -8px 2px; }
+}
 
 /* ---------- IMPORT EXCEL: icona di sessione minimizzata ---------- */
 .import-min-badge{position:fixed; right:22px; bottom:22px; z-index:150; display:none; align-items:center; justify-content:center;
@@ -895,12 +945,50 @@ html[data-theme="light"] .import-min-badge{color:#0B3A2E;}
 .slim-switch-opt.active{background:var(--mint-dim); color:var(--mint);}
 .slim-switch-opt.uscita.active{background:var(--coral-dim); color:var(--coral);}
 .slim-row{display:flex; align-items:center; gap:12px; padding:10px 2px; border-bottom:1px solid var(--border-soft);}
+.date-quick-chips{display:flex; gap:6px; flex-shrink:0;}
+.date-quick-chip{background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim); font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:999px; cursor:pointer; white-space:nowrap;}
+.date-quick-chip:hover{color:var(--text); border-color:var(--text-faint);}
+.date-quick-chip:active{transform:scale(.94);}
 .slim-row:last-child{border-bottom:none;}
 .slim-row-pair{display:flex; gap:16px; padding:10px 2px; border-bottom:1px solid var(--border-soft);}
 .slim-row-pair:last-child{border-bottom:none;}
 .slim-half{display:flex; align-items:center; gap:10px; flex:1; min-width:0;}
 .slim-icon{width:26px; height:26px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; color:var(--text-dim); flex-shrink:0;}
 .slim-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px;}
+.mimporto-display{display:none;}
+@media(max-width:880px){
+  /* Sul campo Importo del form Movimento, la tastiera di sistema è sostituita da un tastierino
+     dedicato: l'input reale resta nel DOM (per la logica di salvataggio) ma invisibile, al suo
+     posto si vede questo display con importo formattato, che apre il tastierino al tocco. */
+  .slim-amount #mImporto{display:none;}
+  .mimporto-display{
+    display:block; font-family:'JetBrains Mono',monospace; font-size:21px; font-weight:700;
+    color:var(--text); padding:5px 0; cursor:pointer; letter-spacing:-.01em;
+  }
+}
+.importo-keypad-backdrop{
+  display:none; position:fixed; inset:0; z-index:300; background:rgba(6,10,12,.55);
+  align-items:flex-end; justify-content:center;
+}
+.importo-keypad-backdrop.show{display:flex;}
+.importo-keypad{
+  width:100%; max-width:480px; background:var(--surface); border-radius:20px 20px 0 0;
+  padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));
+  box-shadow:0 -10px 30px rgba(0,0,0,.3);
+  animation:importoKeypadIn .22s cubic-bezier(.22,.68,0,1) both;
+}
+@keyframes importoKeypadIn{from{transform:translateY(100%);} to{transform:translateY(0);}}
+.importo-keypad-value{
+  font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:800; text-align:center;
+  padding:6px 0 16px; color:var(--text);
+}
+.importo-keypad-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:9px;}
+.importo-keypad-grid button{
+  background:var(--surface-2); border:1px solid var(--border); border-radius:14px;
+  font-size:21px; font-weight:700; color:var(--text); padding:15px 0; cursor:pointer;
+}
+.importo-keypad-grid button:active{background:var(--surface-3); transform:scale(.96);}
+.importo-keypad-grid .ik-done{background:var(--accent,var(--mint)); border-color:var(--accent,var(--mint)); color:#052E38; display:flex; align-items:center; justify-content:center;}
 .slim-main label{font-size:10px; color:var(--text-faint); font-weight:700; text-transform:uppercase; letter-spacing:.03em; display:block;}
 .slim-form input, .slim-form select, .slim-form textarea{
   background:transparent !important; border:none !important; padding:1px 0 !important; font-size:13.5px;
@@ -1012,6 +1100,7 @@ html[data-theme="light"] .import-min-badge{color:#0B3A2E;}
 .accent-swatch.active{border-color:var(--text);}
 .accent-swatch.active::after{content:"✓"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.55);}
 .switch{position:relative; width:46px; height:26px; background:var(--surface-3); border:1px solid var(--border); border-radius:20px; cursor:pointer; flex-shrink:0;}
+.switch.disabled{opacity:.45; pointer-events:none;}
 .switch::after{content:''; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:var(--text-dim); transition:transform .2s, background .2s;}
 .switch.on{background:var(--mint-dim); border-color:var(--mint);}
 .switch.on::after{transform:translateX(20px); background:var(--mint);}
@@ -1206,6 +1295,8 @@ html[data-theme="light"] .import-min-badge{color:#0B3A2E;}
 .cm-empty{padding:12px 4px; font-size:12px; color:var(--text-faint); text-align:center;}
 .cm-body .add-inline{padding:10px 14px 14px; margin-top:0;}
 .toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface-3); border:1px solid var(--border); padding:11px 14px 11px 20px; border-radius:10px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:all .25s; z-index:200; box-shadow:var(--shadow); display:flex; align-items:center; gap:12px;}
+.toast-success-icon{color:var(--money-pos); display:inline-flex; animation:toastCheckPop .35s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes toastCheckPop{from{transform:scale(.4); opacity:0;} to{transform:scale(1); opacity:1;}}
 .chart-value-bubble{
   position:fixed; z-index:250; background:var(--surface-3); border:1px solid var(--border);
   padding:8px 14px; border-radius:10px; font-size:13px; font-weight:700; color:var(--text);
@@ -1220,7 +1311,7 @@ html[data-theme="light"] .import-min-badge{color:#0B3A2E;}
 .search-box{position:relative; margin-bottom:18px;}
 .search-box input{width:100%; padding:13px 16px 13px 42px; font-size:14.5px; border-radius:12px;}
 .search-box .ic{position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-faint);}
-.empty-state{text-align:center; padding:50px 20px; color:var(--text-faint);}
+.empty-state{text-align:center; padding:50px 20px; color:var(--text-faint); animation:fadein .3s ease;}
 .welcome-empty{max-width:420px; margin:60px auto; text-align:center; padding:32px 24px;}
 .welcome-empty-icon{width:64px; height:64px; margin:0 auto 18px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; color:var(--accent,var(--mint));}
 .welcome-empty h2{font-size:19px; margin-bottom:8px;}
@@ -1239,7 +1330,10 @@ html[data-theme="light"] .import-min-badge{color:#0B3A2E;}
 }
 .pwa-update-banner.show{transform:translate(-50%,0);}
 @media(max-width:880px){ .pwa-update-banner{ bottom:calc(74px + env(safe-area-inset-bottom,0px)); left:16px; right:16px; transform:translateY(140%); } .pwa-update-banner.show{transform:translateY(0);} }
-.empty-state .ic{font-size:30px; margin-bottom:10px;}
+.empty-state .ic{
+  width:52px; height:52px; margin:0 auto 12px; border-radius:50%; background:var(--surface-2);
+  display:flex; align-items:center; justify-content:center; color:var(--text-faint);
+}
 .section-label{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); margin:22px 0 10px;}
 .section-label:first-child{margin-top:0;}
 
@@ -1415,7 +1509,9 @@ th.src-col, td.src-col{width:26px; text-align:center; padding-left:0; padding-ri
   .btn-import .spark{display:none;}
   /* Valori nelle card KPI (inclusi km totali/medi in Macchina): testo più piccolo e
      card meno "grasse" così il numero ci sta sempre per intero, senza tagli. */
-  .kpi-card{padding:13px 14px;}
+  .kpi-card{padding:16px 16px;}
+  .kpi-value{margin-top:11px;}
+  .kpi-grid{gap:12px 14px;}
   .kpi-value{font-size:18px;}
   .kpi-grid{grid-template-columns:1fr 1fr;}
   .field-row{grid-template-columns:1fr;}
@@ -1536,14 +1632,6 @@ th.src-col, td.src-col{width:26px; text-align:center; padding-left:0; padding-ri
       <div class="mobile-topbar-title" id="mobileTopbarTitle">Dashboard</div>
       <div class="mobile-topbar-pill mobile-topbar-right" id="mobileTopbarActions"></div>
     </div>
-    <nav class="mobile-tabbar" id="mobileTabbar">
-      <div class="mobile-tab-indicator" id="mobileTabIndicator"></div>
-      <button class="mobile-tab nav-item active" data-view="dashboard" aria-label="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></button>
-      <button class="mobile-tab nav-item" data-view="movimenti" aria-label="Movimenti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
-      <button class="mobile-tab nav-item" data-view="ricerca" aria-label="Ricerca e Confronto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
-      <button class="mobile-tab nav-item" data-view="abbonamenti" aria-label="Abbonamenti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg></button>
-      <button class="mobile-tab nav-item" data-view="auto" aria-label="Macchina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L18.5 11"></path><rect x="2.5" y="11" width="19" height="6" rx="2"></rect><circle cx="7.5" cy="17.5" r="1.5"></circle><circle cx="16.5" cy="17.5" r="1.5"></circle></svg></button>
-    </nav>
     <div id="monthlyBanner" class="backup-banner" style="display:none;"></div>
     <div id="backupBanner" class="backup-banner" style="display:none;"></div>
     <div class="view" id="view-dashboard"></div>
@@ -1553,6 +1641,17 @@ th.src-col, td.src-col{width:26px; text-align:center; padding-left:0; padding-ri
     <div class="view" id="view-auto"></div>
     <div class="view" id="view-impostazioni"></div>
   </main>
+  <nav class="mobile-tabbar" id="mobileTabbar">
+    <div class="mobile-tab-indicator" id="mobileTabIndicator"></div>
+    <button class="mobile-tab nav-item active" data-view="dashboard" aria-label="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></button>
+    <button class="mobile-tab nav-item" data-view="movimenti" aria-label="Movimenti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
+    <button class="mobile-tab nav-item" data-view="ricerca" aria-label="Ricerca e Confronto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+    <button class="mobile-tab nav-item" data-view="abbonamenti" aria-label="Abbonamenti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg></button>
+    <button class="mobile-tab nav-item" data-view="auto" aria-label="Macchina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L18.5 11"></path><rect x="2.5" y="11" width="19" height="6" rx="2"></rect><circle cx="7.5" cy="17.5" r="1.5"></circle><circle cx="16.5" cy="17.5" r="1.5"></circle></svg></button>
+  </nav>
+  <button class="mobile-fab" id="mobileFabNewMov" title="Nuovo movimento" aria-label="Nuovo movimento">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+  </button>
 </div>
 
 
@@ -1576,7 +1675,7 @@ const SEED_DATA = {"movimenti":[{"data":"2025-10-01","categoria":"Abbonamenti","
 // Aggiornare questa stringa ad ogni nuova versione pubblicata su GitHub:
 // serve al controllo automatico "Nuova versione disponibile" per accorgersi
 // che è stato pubblicato un aggiornamento.
-const APP_BUILD = '2026-09-12-02';
+const APP_BUILD = '2026-09-12-08';
 const LS_KEY = 'ledger_db_v1';
 const LS_THEME = 'ledger_theme_v1';
 const LS_PRIVACY = 'ledger_privacy_v1';
@@ -1941,6 +2040,17 @@ function toast(msg){
   clearTimeout(toast._t);
   toast._t = setTimeout(()=>t.classList.remove('show'), 2400);
 }
+/* Variante di conferma positiva (es. dopo il salvataggio di un movimento): stesso toast, ma con
+   un'iconcina di spunta che si "apre" con un piccolo rimbalzo e una vibrazione leggerissima —
+   chiude meglio il gesto di salvataggio rispetto al solo messaggio testuale. */
+function toastSuccess(msg){
+  const t = document.getElementById('toast');
+  t.innerHTML = `<span class="toast-success-icon">${ico('checkCircle',16)}</span><span>${esc(msg)}</span>`;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove('show'), 2400);
+  if(navigator.vibrate){ try{ navigator.vibrate(12); }catch(e){} }
+}
 
 /* ---- Toast con "Annulla" per le eliminazioni (5s) ---- */
 function toastUndo(msg, restoreFn){
@@ -2197,6 +2307,18 @@ function removeManyByIdWithUndo(arr, ids, message, onDone){
 }
 
 /* ==================== THEME ==================== */
+const LS_THEME_AUTO = 'ledger_theme_auto_v1';
+function themeAutoOn(){ return localStorage.getItem(LS_THEME_AUTO)==='1'; }
+function systemPrefersDark(){ return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }
+function setThemeAuto(on){
+  localStorage.setItem(LS_THEME_AUTO, on ? '1' : '0');
+  if(on) applyTheme(systemPrefersDark() ? 'dark' : 'light');
+}
+if(window.matchMedia){
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)=>{
+    if(themeAutoOn()) applyTheme(e.matches ? 'dark' : 'light');
+  });
+}
 function applyTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem(LS_THEME, theme);
@@ -2283,6 +2405,7 @@ function switchView(name){
   currentView = name;
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.view===name));
   document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active', el.id==='view-'+name));
+  document.getElementById('mobileFabNewMov')?.classList.toggle('show', name==='movimenti');
   updateMobileTopbarForView(name);
   updateMobileTabIndicator();
   closeSidebarMobile();
@@ -2326,7 +2449,7 @@ const MOBILE_VIEW_TITLES = { dashboard:'Dashboard', movimenti:'Movimenti', ricer
    azione. "Salva PDF" riusa il bottone già presente (nascosto) nella vecchia topbar di pagina,
    così non c'è logica duplicata. */
 function mobileTopbarActionsFor(name){
-  if(name==='movimenti') return [{icon:'plus', title:'Nuovo movimento', action:()=>openMovModal()}];
+  if(name==='movimenti') return [];
   if(name==='abbonamenti') return [{icon:'plus', title:'Nuovo abbonamento', action:()=>openSubModal()}];
   if(name==='dashboard') return [{icon:'printer', title:'Salva PDF', action:()=>document.getElementById('btnPdfDashboard')?.click()}];
   if(name==='ricerca' && typeof ricercaMode!=='undefined' && ricercaMode==='ricerca') return [{icon:'printer', title:'Salva PDF', action:()=>document.getElementById('btnPdfRicerca')?.click()}];
@@ -2500,6 +2623,7 @@ function openSettingsPanel(html){
   }
 }
 function closeModal(){
+  document.getElementById('importoKeypadBackdrop')?.classList.remove('show');
   const backdrop = document.getElementById('modalBackdrop');
   const box = document.getElementById('modalBox');
   if(backdrop.classList.contains('settings-page-mode')){
@@ -2534,11 +2658,11 @@ function closeModal(){
    verticale delle liste. Un solo listener globale: nessun rischio di ascoltatori duplicati
    ogni volta che si apre una nuova pagina. */
 (function setupModalSwipeBack(){
-  /* Swipe dal bordo sinistro per tornare indietro: vale sia per le pagine a scorrimento
-     (Impostazioni e simili) sia per i popup "classici" (form di Movimento, Abbonamento, Auto,
-     Manutenzione, ecc.) — stesso gesto, stessa sensazione, ovunque sia aperto qualcosa. */
+  /* Swipe dal bordo sinistro O dal bordo destro per tornare indietro: vale sia per le pagine a
+     scorrimento (Impostazioni e simili) sia per i popup "classici" (form di Movimento,
+     Abbonamento, Auto, Manutenzione, ecc.) — stesso gesto, stessa sensazione, da entrambi i lati. */
   const EDGE_ZONE = 28, CLOSE_RATIO = 0.33, FLICK_VELOCITY = 0.55; // px/ms
-  let active=false, decided=false, horizontal=false, mode=null;
+  let active=false, decided=false, horizontal=false, mode=null, dir=1;
   let startX=0, startY=0, startT=0, lastX=0, lastT=0, velocity=0;
 
   document.addEventListener('touchstart', (e)=>{
@@ -2548,7 +2672,10 @@ function closeModal(){
     else if(backdrop.classList.contains('show')) mode = 'modal';
     else { mode = null; return; }
     const t = e.touches[0];
-    if(t.clientX > EDGE_ZONE) return;
+    const fromLeft = t.clientX <= EDGE_ZONE;
+    const fromRight = t.clientX >= window.innerWidth - EDGE_ZONE;
+    if(!fromLeft && !fromRight) return;
+    dir = fromLeft ? 1 : -1; // 1 = trascina verso destra (bordo sx), -1 = verso sinistra (bordo dx)
     active = true; decided = false; horizontal = false;
     startX = lastX = t.clientX; startY = t.clientY; startT = lastT = e.timeStamp; velocity = 0;
   }, {passive:true});
@@ -2560,13 +2687,13 @@ function closeModal(){
     if(!decided){
       if(Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
       decided = true;
-      horizontal = Math.abs(dx) > Math.abs(dy);
+      horizontal = Math.abs(dx) > Math.abs(dy) && Math.sign(dx||1)===dir;
       if(!horizontal){ active = false; return; }
       document.getElementById('modalBox').style.transition = 'none';
     }
     if(!horizontal) return;
     e.preventDefault();
-    const x = Math.max(0, dx);
+    const x = dir>0 ? Math.max(0, dx) : Math.min(0, dx);
     velocity = (t.clientX - lastX) / Math.max(1, e.timeStamp - lastT);
     lastX = t.clientX; lastT = e.timeStamp;
     document.getElementById('modalBox').style.transform = `translateX(${x}px)`;
@@ -2577,11 +2704,11 @@ function closeModal(){
     active = false;
     const box = document.getElementById('modalBox');
     const width = window.innerWidth;
-    const x = Math.max(0, lastX - startX);
-    const shouldClose = x > width*CLOSE_RATIO || velocity > FLICK_VELOCITY;
+    const x = dir>0 ? Math.max(0, lastX - startX) : Math.min(0, lastX - startX);
+    const shouldClose = Math.abs(x) > width*CLOSE_RATIO || (dir>0 ? velocity : -velocity) > FLICK_VELOCITY;
     box.style.transition = 'transform .26s cubic-bezier(.22,.68,0,1)';
     if(shouldClose){
-      box.style.transform = `translateX(${width}px)`;
+      box.style.transform = `translateX(${dir>0 ? width : -width}px)`;
       if(navigator.vibrate) try{ navigator.vibrate(8); }catch(e){}
       setTimeout(()=>{
         // La chiusura visiva l'ha già fatta lo swipe: qui puliamo lo stato direttamente
@@ -3537,9 +3664,39 @@ function openMovSelectionMenu(){
 /* Tocco breve = espande i dettagli della riga; tocco prolungato (~450ms) = entra in modalità
    selezione; con la selezione già attiva, ogni tocco (anche breve) aggiunge/toglie la riga. */
 function wireMovDayRows(container){
+  const SWIPE_REVEAL = 128; // larghezza del layer azioni (2 bottoni da 64px)
+  const SWIPE_CLOSE_RATIO = 0.4;
+  let openRow = null; // riga attualmente "aperta" (azioni rivelate), una sola alla volta
+
+  function closeRow(row, animate=true){
+    const content = row.querySelector('.mov-row-content');
+    if(!content) return;
+    content.style.transition = animate ? '' : 'none';
+    content.style.transform = 'translateX(0)';
+    row.classList.remove('swipe-open');
+    if(openRow===row) openRow = null;
+    if(!animate) void content.offsetWidth, content.style.transition = '';
+  }
+
   container.querySelectorAll('.mov-day-list .mov-row[data-id]').forEach(row=>{
+    const content = row.querySelector('.mov-row-content');
+    const editBtn = row.querySelector('.mov-swipe-edit');
+    const deleteBtn = row.querySelector('.mov-swipe-delete');
+    if(editBtn) editBtn.onclick = (e)=>{
+      e.stopPropagation();
+      closeRow(row);
+      openMovModal(row.dataset.id);
+    };
+    if(deleteBtn) deleteBtn.onclick = (e)=>{
+      e.stopPropagation();
+      closeRow(row);
+      removeByIdWithUndo(DB.movimenti, row.dataset.id, 'Movimento eliminato', renderMovimenti);
+    };
+
     let pressTimer = null, longPressed = false;
-    row.addEventListener('touchstart', ()=>{
+    let swiping=false, swipeDecided=false, swipeStartX=0, swipeStartY=0, swipeLastX=0, swipeBaseX=0, justSwiped=false;
+
+    row.addEventListener('touchstart', (e)=>{
       if(movSelectionMode) return;
       longPressed = false;
       pressTimer = setTimeout(()=>{
@@ -3547,12 +3704,56 @@ function wireMovDayRows(container){
         enterMovSelectionMode(row.dataset.id);
         if(navigator.vibrate) try{ navigator.vibrate(12); }catch(e){}
       }, 450);
+      const t = e.touches[0];
+      swiping = true; swipeDecided = false; justSwiped = false;
+      swipeStartX = swipeLastX = t.clientX; swipeStartY = t.clientY;
+      swipeBaseX = row.classList.contains('swipe-open') ? -SWIPE_REVEAL : 0;
     }, {passive:true});
+
     const cancelPress = ()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } };
-    row.addEventListener('touchend', cancelPress, {passive:true});
-    row.addEventListener('touchmove', cancelPress, {passive:true});
+    row.addEventListener('touchmove', (e)=>{
+      cancelPress();
+      if(movSelectionMode || !swiping) return;
+      const t = e.touches[0];
+      const dx = t.clientX - swipeStartX, dy = t.clientY - swipeStartY;
+      if(!swipeDecided){
+        if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        swipeDecided = Math.abs(dx) > Math.abs(dy);
+        if(!swipeDecided){ swiping = false; return; }
+        if(openRow && openRow!==row) closeRow(openRow);
+        content.style.transition = 'none';
+      }
+      e.preventDefault();
+      swipeLastX = t.clientX;
+      const x = Math.min(0, Math.max(-SWIPE_REVEAL - 24, swipeBaseX + dx));
+      content.style.transform = `translateX(${x}px)`;
+    }, {passive:false});
+
+    row.addEventListener('touchend', ()=>{
+      cancelPress();
+      if(!swiping){ return; }
+      swiping = false;
+      if(!swipeDecided) return;
+      justSwiped = true;
+      setTimeout(()=>{ justSwiped = false; }, 50);
+      const x = swipeBaseX + (swipeLastX - swipeStartX);
+      content.style.transition = '';
+      const shouldOpen = x < -SWIPE_REVEAL*SWIPE_CLOSE_RATIO;
+      if(shouldOpen){
+        content.style.transform = `translateX(${-SWIPE_REVEAL}px)`;
+        row.classList.add('swipe-open');
+        openRow = row;
+        if(navigator.vibrate) try{ navigator.vibrate(6); }catch(e){}
+      } else {
+        closeRow(row);
+      }
+    }, {passive:true});
+
     row.onclick = (e)=>{
       if(longPressed){ longPressed=false; return; }
+      if(justSwiped) return;
+      if(e.target.closest('.mov-row-swipe-actions')) return;
+      if(row.classList.contains('swipe-open')){ closeRow(row); return; }
       if(e.target.closest('input, button, a, label')) return;
       if(movSelectionMode){ toggleMovRowSelect(row.dataset.id); return; }
       const willExpand = !row.classList.contains('row-expanded');
@@ -3805,21 +4006,27 @@ function dayGroupsHtml(rows, opts){
       const amt = m.entrate ? m.entrate : (m.uscite||0);
       const fonteIcon = movimentoMetodoIconHtml(m);
       return `<div class="mov-row" data-id="${m.id}">
-        ${movRowAvatarHtml(m.categoria)}
-        <div class="mov-row-mid">
-          <div class="mov-row-title">${esc(m.descrizione||m.categoria||'—')}</div>
-          <div class="mov-row-sub">${esc(m.categoria||'—')}</div>
+        <div class="mov-row-swipe-actions">
+          <button type="button" class="mov-swipe-btn mov-swipe-edit" data-id="${m.id}" aria-label="Modifica">${ico('edit',18)}</button>
+          <button type="button" class="mov-swipe-btn mov-swipe-delete" data-id="${m.id}" aria-label="Elimina">${ico('trash',18)}</button>
         </div>
-        <div class="mov-row-amt ${isNeg?'neg':'pos'}">${isNeg?'-':'+'}${fmtEUR(amt)}</div>
-        <div class="mov-row-extra"><div class="mov-row-extra-inner">
-          <div class="mov-row-extra-line">${fonteIcon} ${esc(m.metodoPagamento||movimentoMetodoEffettivo(m)||'—')}</div>
-          ${m.note?`<div class="mov-row-extra-line">${ico('fileText',13)} ${esc(m.note)}</div>`:''}
-          ${m.etichette && m.etichette.length?`<div class="mov-row-extra-line"><span class="etichette-row">${m.etichette.map(t=>etichettaChipHtml(t,{small:true,clickable:true})).join('')}</span></div>`:''}
-          ${rimborsoLinkBtnHtml(m) ? `<div class="mov-row-extra-line">${rimborsoLinkBtnHtml(m)}</div>` : ''}
-          <div class="row-actions">
-            <button class="btn btn-icon btn-sm kebab-btn ${kebabCls}" data-id="${m.id}" title="Altre azioni">${ico('moreVertical')}</button>
+        <div class="mov-row-content">
+          ${movRowAvatarHtml(m.categoria)}
+          <div class="mov-row-mid">
+            <div class="mov-row-title">${esc(m.descrizione||m.categoria||'—')}</div>
+            <div class="mov-row-sub">${esc(m.categoria||'—')}${m.note?`<span class="mov-row-note-ic" title="Ha una nota">${ico('fileText',11)}</span>`:''}</div>
           </div>
-        </div></div>
+          <div class="mov-row-amt ${isNeg?'neg':'pos'}">${isNeg?'-':'+'}${fmtEUR(amt)}</div>
+          <div class="mov-row-extra"><div class="mov-row-extra-inner">
+            <div class="mov-row-extra-line">${fonteIcon} ${esc(m.metodoPagamento||movimentoMetodoEffettivo(m)||'—')}</div>
+            ${m.note?`<div class="mov-row-extra-line">${ico('fileText',13)} ${esc(m.note)}</div>`:''}
+            ${m.etichette && m.etichette.length?`<div class="mov-row-extra-line"><span class="etichette-row">${m.etichette.map(t=>etichettaChipHtml(t,{small:true,clickable:true})).join('')}</span></div>`:''}
+            ${rimborsoLinkBtnHtml(m) ? `<div class="mov-row-extra-line">${rimborsoLinkBtnHtml(m)}</div>` : ''}
+            <div class="row-actions">
+              <button class="btn btn-icon btn-sm kebab-btn ${kebabCls}" data-id="${m.id}" title="Altre azioni">${ico('moreVertical')}</button>
+            </div>
+          </div></div>
+        </div>
       </div>`;
     }).join('');
     return `<div class="mov-day-block">
@@ -4106,6 +4313,73 @@ function removeRimborsatoTagIfUnused(uscitaId){
   const target = DB.movimenti.find(m=>m.id===uscitaId);
   if(target && Array.isArray(target.etichette)) target.etichette = target.etichette.filter(t=>t!=='Rimborsato');
 }
+/* ==================== TASTIERINO IMPORTO (mobile) ====================
+   Sostituisce la tastiera di sistema per il campo Importo del form Movimento con un tastierino
+   dedicato stile app bancarie: si digita "a cifre" (ogni tocco sposta le cifre esistenti a
+   sinistra, le ultime due restano sempre i centesimi) e il separatore delle migliaia compare
+   dal vivo. Il valore reale del campo #mImporto resta un numero pulito (es. "1234.56"), quindi
+   tutta la logica di salvataggio/validazione esistente continua a funzionare invariata. */
+function setupImportoKeypad(){
+  const input = document.getElementById('mImporto');
+  const display = document.getElementById('mImportoDisplay');
+  if(!input || !display || !isMobileViewport()) return;
+  input.readOnly = true;
+
+  let cents = '0';
+  const initNum = parseFloat(input.value);
+  if(!isNaN(initNum) && initNum>0) cents = Math.round(initNum*100).toString();
+
+  function render(){
+    const c = cents.padStart(3,'0');
+    const intPart = c.slice(0,-2).replace(/^0+(?=\d)/,'');
+    const decPart = c.slice(-2);
+    const intFmt = (intPart||'0').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    display.textContent = `${intFmt},${decPart} €`;
+    input.value = `${parseInt(intPart||'0',10)}.${decPart}`;
+    input.dispatchEvent(new Event('input', {bubbles:true}));
+  }
+  render();
+  input._importoKeypadReset = ()=>{
+    cents = '0'; render();
+    const kv = document.getElementById('importoKeypadValue');
+    if(kv) kv.textContent = display.textContent;
+  };
+  if(!keypad){
+    keypad = document.createElement('div');
+    keypad.className = 'importo-keypad-backdrop';
+    keypad.id = 'importoKeypadBackdrop';
+    keypad.innerHTML = `
+      <div class="importo-keypad">
+        <div class="importo-keypad-value" id="importoKeypadValue"></div>
+        <div class="importo-keypad-grid">
+          ${['1','2','3','4','5','6','7','8','9'].map(n=>`<button type="button" data-k="${n}">${n}</button>`).join('')}
+          <button type="button" class="ik-del" data-k="del" aria-label="Cancella">⌫</button>
+          <button type="button" data-k="0">0</button>
+          <button type="button" class="ik-done" data-k="done" aria-label="Fatto">${ico('check',20)}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(keypad);
+  }
+  const valueEl = document.getElementById('importoKeypadValue');
+  const syncValue = ()=>{ valueEl.textContent = display.textContent; };
+  const openKeypad = ()=>{ syncValue(); keypad.classList.add('show'); };
+  const closeKeypad = ()=>{ keypad.classList.remove('show'); };
+
+  display.onclick = openKeypad;
+  keypad.onclick = (e)=>{ if(e.target===keypad) closeKeypad(); };
+  keypad.querySelectorAll('[data-k]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const k = btn.dataset.k;
+      if(k==='done'){ closeKeypad(); return; }
+      if(k==='del'){ cents = cents.length>1 ? cents.slice(0,-1) : '0'; }
+      else { cents = (cents==='0' ? k : cents+k).slice(-9); }
+      render();
+      syncValue();
+      if(navigator.vibrate) try{ navigator.vibrate(4); }catch(e){}
+    };
+  });
+}
+
 function openMovModal(id, onSaved, duplicateFrom){
   const editing = id ? DB.movimenti.find(m=>m.id===id) : null;
   // duplicateFrom: movimento sorgente quando si duplica un movimento esistente — precompila i campi
@@ -4125,7 +4399,12 @@ function openMovModal(id, onSaved, duplicateFrom){
           ${ico('rotateCcw',13)} Rimborso
         </label>
       </div>
-      <div class="slim-row"><span class="slim-icon">${ico('calendar',14)}</span><div class="slim-main field"><label>Data</label><input type="date" id="mData" value="${editing?editing.data:new Date().toISOString().slice(0,10)}"></div></div>
+      <div class="slim-row"><span class="slim-icon">${ico('calendar',14)}</span><div class="slim-main field"><label>Data</label><input type="date" id="mData" value="${editing?editing.data:new Date().toISOString().slice(0,10)}"></div>
+        <div class="date-quick-chips">
+          <button type="button" class="date-quick-chip" id="mDataOggi">Oggi</button>
+          <button type="button" class="date-quick-chip" id="mDataIeri">Ieri</button>
+        </div>
+      </div>
       <div class="slim-row" id="mRimborsoDiRow" style="display:none;">
         <span class="slim-icon">${ico('link',14)}</span>
         <div class="slim-main field">
@@ -4137,7 +4416,9 @@ function openMovModal(id, onSaved, duplicateFrom){
       <div class="slim-row"><span class="slim-icon">${ico('tag',14)}</span><div class="slim-main field"><label id="mDescLabel">Dettaglio${tipo==='uscita'?'':' (opzionale)'}</label><select id="mDescrizione"></select></div></div>
       <div class="slim-row slim-amount">
         <span class="slim-icon">${ico('wallet',14)}</span>
-        <div class="slim-main field"><label>Importo (€)</label><input type="number" step="0.01" min="0" id="mImporto" value="${prefill?(prefill.entrate||prefill.uscite||''):''}" placeholder="0.00"></div>
+        <div class="slim-main field"><label>Importo (€)</label><input type="number" step="0.01" inputmode="decimal" min="0" id="mImporto" value="${prefill?(prefill.entrate||prefill.uscite||''):''}" placeholder="0.00">
+          <div class="mimporto-display" id="mImportoDisplay">0,00 €</div>
+        </div>
       </div>
       <div id="mRimborsoMismatch" style="display:none;"></div>
       <div class="slim-row"><span class="slim-icon">${ico('creditCard',14)}</span><div class="slim-main field"><label>Metodo di pagamento</label><select id="mMetodoPagamento"></select></div></div>
@@ -4269,6 +4550,11 @@ function openMovModal(id, onSaved, duplicateFrom){
   wireEtichetteChipInput('mEtichetteChips','mEtichetteInput', ()=>mEtichette, (v)=>{ mEtichette = v; }, null, 'mEtichetteSuggest');
 
   document.getElementById('mClose').onclick = closeModal;
+  const pad2 = n=>String(n).padStart(2,'0');
+  const toISODate = d=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  document.getElementById('mDataOggi').onclick = ()=>{ document.getElementById('mData').value = toISODate(new Date()); };
+  document.getElementById('mDataIeri').onclick = ()=>{ const d = new Date(); d.setDate(d.getDate()-1); document.getElementById('mData').value = toISODate(d); };
+  setupImportoKeypad();
   document.getElementById('mCancel').onclick = closeModal;
   if(editing) document.getElementById('mDelete').onclick = ()=>{
     closeModal();
@@ -4314,7 +4600,7 @@ function openMovModal(id, onSaved, duplicateFrom){
       oldRimborsoDiIds.filter(id=>!rimborsoDiIds.includes(id)).forEach(removeRimborsatoTagIfUnused);
       rimborsoDiIds.forEach(applyRimborsatoTag);
       if(movExpandedYears) movExpandedYears.add(data.slice(0,4));
-      saveDB(); closeModal(); toast('Movimento salvato'); (onSaved || renderCurrentView)();
+      saveDB(); closeModal(); toastSuccess('Movimento salvato'); (onSaved || renderCurrentView)();
       return;
     }
     // Nuovo movimento: salva ma NON chiude la finestra, per agevolare l'inserimento di più movimenti
@@ -4325,8 +4611,8 @@ function openMovModal(id, onSaved, duplicateFrom){
     DB.movimenti.push(newMov);
     rimborsoDiIds.forEach(applyRimborsatoTag);
     if(movExpandedYears) movExpandedYears.add(data.slice(0,4));
-    saveDB(); toast('Movimento salvato'); (onSaved || renderCurrentView)();
-    document.getElementById('mImporto').value = '';
+    saveDB(); toastSuccess('Movimento salvato'); (onSaved || renderCurrentView)();
+    document.getElementById('mImporto')._importoKeypadReset ? document.getElementById('mImporto')._importoKeypadReset() : (document.getElementById('mImporto').value = '');
     document.getElementById('mNote').value = '';
     mEtichette = [];
     document.getElementById('mEtichetteChips').innerHTML = '';
@@ -4414,7 +4700,7 @@ function openPianificatoFormModal(id, onSaved){
         <div class="field"><label>Dettaglio${tipo==='uscita'?'':' (opzionale)'}</label><select id="pfDescrizione"></select></div>
       </div>
       <div class="field-row-2">
-        <div class="field"><label>Importo (€)</label><input type="number" step="0.01" min="0" id="pfImporto" value="${editing?editing.importo||'':''}" placeholder="0.00"></div>
+        <div class="field"><label>Importo (€)</label><input type="number" step="0.01" inputmode="decimal" min="0" id="pfImporto" value="${editing?editing.importo||'':''}" placeholder="0.00"></div>
         <div class="field"><label>Note (opzionale)</label><input type="text" id="pfNote" value="${editing?esc(editing.note||''):''}" placeholder="Aggiungi una nota"></div>
       </div>
     </div>
@@ -6532,40 +6818,7 @@ function movimentiForTotals(list){
   });
 }
 let searchFilter = { anni:[], mesi:[], min:'', max:'', dataMin:'', dataMax:'', categoria:'', dettaglio:'', note:'', etichette:[], multi:false, tipo:'tutti', metodo:'tutti' };
-/* Filtri rapidi di data in Ricerca: alternativa via pulsante ai pill Anni/Mesi per intervalli che
-   non coincidono con un mese/anno intero (es. "ultimi 30 giorni"). Impostano searchFilter.dataMin/
-   dataMax e si escludono a vicenda con la selezione Anni/Mesi (attivare l'uno svuota l'altro). */
-let searchQuickRangeActive = null;
-const SEARCH_QUICK_RANGES = [
-  { id:'30gg', label:'Ultimi 30gg' },
-  { id:'mese', label:'Mese corrente' },
-  { id:'trim', label:'Trimestre corrente' },
-  { id:'anno', label:'Anno corrente' }
-];
-function computeQuickDateRange(id){
-  const now = new Date();
-  const pad = n=>String(n).padStart(2,'0');
-  const toStr = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  if(id==='30gg'){
-    const start = new Date(now); start.setDate(start.getDate()-29);
-    return { dataMin: toStr(start), dataMax: toStr(now) };
-  }
-  if(id==='mese'){
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth()+1, 0);
-    return { dataMin: toStr(start), dataMax: toStr(end) };
-  }
-  if(id==='trim'){
-    const qStart = Math.floor(now.getMonth()/3)*3;
-    const start = new Date(now.getFullYear(), qStart, 1);
-    const end = new Date(now.getFullYear(), qStart+3, 0);
-    return { dataMin: toStr(start), dataMax: toStr(end) };
-  }
-  if(id==='anno'){
-    return { dataMin: `${now.getFullYear()}-01-01`, dataMax: `${now.getFullYear()}-12-31` };
-  }
-  return { dataMin:'', dataMax:'' };
-}
+let searchAdvancedOpen = false;
 let searchSelected = new Set();
 function hasActiveSearchFilters(){
   const f = searchFilter;
@@ -6676,60 +6929,7 @@ function renderRicercaSearchBody(){
   el.innerHTML = `
     <div class="time-selector">
       <div class="search-filters-grid">
-        <div class="search-col search-col-what">
-          <div class="time-selector-row">
-            <span class="time-selector-label">Categoria</span>
-            <input type="text" id="searchCategoria" placeholder="Cerca per Categoria…" value="${esc(searchFilter.categoria)}">
-          </div>
-          <div class="time-selector-row">
-            <span class="time-selector-label">Dettaglio</span>
-            <input type="text" id="searchDettaglio" placeholder="Cerca per Dettaglio…" value="${esc(searchFilter.dettaglio)}">
-          </div>
-          <div class="time-selector-row">
-            <span class="time-selector-label">Note</span>
-            <input type="text" id="searchNote" placeholder="Cerca nelle Note…" value="${esc(searchFilter.note)}">
-          </div>
-          <div class="time-selector-row">
-            <span class="time-selector-label">Tipo</span>
-            <div class="pill-group" id="searchTipoPills">
-              <button type="button" class="pill ${searchFilter.tipo==='tutti'?'active':''}" data-tipo="tutti">Tutti</button>
-              <button type="button" class="pill ${searchFilter.tipo==='entrata'?'active':''}" data-tipo="entrata">Solo Entrate</button>
-              <button type="button" class="pill ${searchFilter.tipo==='uscita'?'active':''}" data-tipo="uscita">Solo Uscite</button>
-            </div>
-          </div>
-          <div class="time-selector-row">
-            <span class="time-selector-label">Metodo</span>
-            <select id="searchMetodo">
-              <option value="tutti">Tutti i metodi</option>
-              ${DB.metodiPagamento.map(m=>`<option value="${esc(m)}" ${searchFilter.metodo===m?'selected':''}>${esc(m)}</option>`).join('')}
-            </select>
-          </div>
-          <div class="time-selector-row">
-            <span class="time-selector-label">Importo</span>
-            <div class="amount-range-group">
-              <input type="number" step="0.01" id="searchMin" placeholder="Da € (min)" value="${searchFilter.min}">
-              <span style="color:var(--text-faint);">—</span>
-              <input type="number" step="0.01" id="searchMax" placeholder="A € (max)" value="${searchFilter.max}">
-            </div>
-          </div>
-          <div class="time-selector-row">
-            <span class="time-selector-label">Etichette</span>
-            <div class="etichetta-field">
-              <div class="tag-input-wrap">
-                <div class="tag-chips" id="searchEtichetteChips"></div>
-                <input type="text" id="searchEtichetteInput" placeholder="Filtra per etichetta…">
-              </div>
-              <div class="etichetta-suggest" id="searchEtichetteSuggest"></div>
-            </div>
-          </div>
-        </div>
         <div class="search-col search-col-when">
-          <div class="time-selector-row">
-            <span class="time-selector-label">Rapidi</span>
-            <div class="pill-group" id="searchQuickDatePills">
-              ${SEARCH_QUICK_RANGES.map(q=>`<button type="button" class="pill ${searchQuickRangeActive===q.id?'active':''}" data-quick="${q.id}">${q.label}</button>`).join('')}
-            </div>
-          </div>
           <div class="time-selector-row">
             <span class="time-selector-label">Anni</span>
             <div class="pill-group" id="searchYearPills">
@@ -6746,7 +6946,68 @@ function renderRicercaSearchBody(){
             </div>
           </div>
         </div>
+        <div class="search-col search-col-what">
+          <div class="time-selector-row">
+            <span class="time-selector-label">Categoria</span>
+            <input type="text" id="searchCategoria" placeholder="Cerca per Categoria…" value="${esc(searchFilter.categoria)}">
+          </div>
+          <div class="time-selector-row">
+            <span class="time-selector-label">Dettaglio</span>
+            <input type="text" id="searchDettaglio" placeholder="Cerca per Dettaglio…" value="${esc(searchFilter.dettaglio)}">
+          </div>
+          <div class="time-selector-row">
+            <span class="time-selector-label">Note</span>
+            <input type="text" id="searchNote" placeholder="Cerca nelle Note…" value="${esc(searchFilter.note)}">
+          </div>
+        </div>
       </div>
+
+      <button type="button" class="search-advanced-toggle ${searchAdvancedOpen?'open':''}" id="btnSearchAdvancedToggle">
+        <svg class="sat-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        Ricerca avanzata
+      </button>
+      <div class="search-advanced-body ${searchAdvancedOpen?'open':''}" id="searchAdvancedBody">
+        <div class="search-filters-grid">
+          <div class="search-col search-col-what">
+            <div class="time-selector-row">
+              <span class="time-selector-label">Tipo</span>
+              <div class="pill-group" id="searchTipoPills">
+                <button type="button" class="pill ${searchFilter.tipo==='tutti'?'active':''}" data-tipo="tutti">Tutti</button>
+                <button type="button" class="pill ${searchFilter.tipo==='entrata'?'active':''}" data-tipo="entrata">Entrate</button>
+                <button type="button" class="pill ${searchFilter.tipo==='uscita'?'active':''}" data-tipo="uscita">Uscite</button>
+              </div>
+            </div>
+            <div class="time-selector-row">
+              <span class="time-selector-label">Metodo</span>
+              <select id="searchMetodo">
+                <option value="tutti">Tutti i metodi</option>
+                ${DB.metodiPagamento.map(m=>`<option value="${esc(m)}" ${searchFilter.metodo===m?'selected':''}>${esc(m)}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="search-col search-col-when">
+            <div class="time-selector-row">
+              <span class="time-selector-label">Importo</span>
+              <div class="amount-range-group">
+                <input type="number" step="0.01" inputmode="decimal" id="searchMin" placeholder="Da € (min)" value="${searchFilter.min}">
+                <span style="color:var(--text-faint);">—</span>
+                <input type="number" step="0.01" inputmode="decimal" id="searchMax" placeholder="A € (max)" value="${searchFilter.max}">
+              </div>
+            </div>
+            <div class="time-selector-row">
+              <span class="time-selector-label">Etichette</span>
+              <div class="etichetta-field">
+                <div class="tag-input-wrap">
+                  <div class="tag-chips" id="searchEtichetteChips"></div>
+                  <input type="text" id="searchEtichetteInput" placeholder="Filtra per etichetta…">
+                </div>
+                <div class="etichetta-suggest" id="searchEtichetteSuggest"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="search-filters-foot">
         <button type="button" class="time-reset-btn" id="btnResetSearchFilters" title="Rimuovi tutti i filtri di ricerca">${ico('rotateCcw')} Reset</button>
       </div>
@@ -6755,25 +7016,9 @@ function renderRicercaSearchBody(){
     <div id="searchStats"></div>
     <div id="searchResults"></div>
   `;
-  el.querySelectorAll('#searchQuickDatePills .pill').forEach(b=>{
-    b.onclick = ()=>{
-      const id = b.dataset.quick;
-      if(searchQuickRangeActive===id){
-        searchQuickRangeActive = null;
-        searchFilter.dataMin = ''; searchFilter.dataMax = '';
-      } else {
-        searchQuickRangeActive = id;
-        const range = computeQuickDateRange(id);
-        searchFilter.dataMin = range.dataMin; searchFilter.dataMax = range.dataMax;
-        searchFilter.anni = []; searchFilter.mesi = [];
-      }
-      renderRicerca();
-    };
-  });
   el.querySelectorAll('#searchYearPills .pill').forEach(p=>{
     p.onclick = ()=>{
       const y = p.dataset.year;
-      searchQuickRangeActive = null; searchFilter.dataMin=''; searchFilter.dataMax='';
       if(searchFilter.multi){
         const idx = searchFilter.anni.indexOf(y);
         if(idx>-1) searchFilter.anni.splice(idx,1); else searchFilter.anni.push(y);
@@ -6786,7 +7031,6 @@ function renderRicercaSearchBody(){
   el.querySelectorAll('#searchMonthGrid .month-tile').forEach(t=>{
     t.onclick = ()=>{
       const mo = String(t.dataset.month);
-      searchQuickRangeActive = null; searchFilter.dataMin=''; searchFilter.dataMax='';
       if(searchFilter.multi){
         const idx = searchFilter.mesi.indexOf(mo);
         if(idx>-1) searchFilter.mesi.splice(idx,1); else searchFilter.mesi.push(mo);
@@ -6797,12 +7041,12 @@ function renderRicercaSearchBody(){
     };
   });
   document.getElementById('btnSearchMultiToggle').onclick = ()=>{ searchFilter.multi = !searchFilter.multi; renderRicerca(); };
+  document.getElementById('btnSearchAdvancedToggle').onclick = ()=>{ searchAdvancedOpen = !searchAdvancedOpen; renderRicerca(); };
   el.querySelectorAll('#searchTipoPills .pill').forEach(p=>{
     p.onclick = ()=>{ searchFilter.tipo = p.dataset.tipo; renderRicerca(); };
   });
   document.getElementById('searchMetodo').onchange = e=>{ searchFilter.metodo = e.target.value; doSearch(); };
   document.getElementById('btnResetSearchFilters').onclick = ()=>{
-    searchQuickRangeActive = null;
     searchFilter = { anni:[], mesi:[], min:'', max:'', dataMin:'', dataMax:'', categoria:'', dettaglio:'', note:'', etichette:[], multi:searchFilter.multi, tipo:'tutti', metodo:'tutti' };
     renderRicerca();
   };
@@ -7093,7 +7337,7 @@ function doSearch(keepSelection, keepPage){
   const statsBox = document.getElementById('searchStats');
   if(!hasActiveSearchFilters()){
     statsBox.innerHTML = '';
-    results.innerHTML = `<div class="empty-state"><div class="ic">${ico('search')}</div>Imposta uno o più filtri per iniziare a esplorare i tuoi dati.</div>`;
+    results.innerHTML = `<div class="empty-state"><div class="ic">${ico('search')}</div>Scegli uno o più filtri qui sopra per iniziare a esplorare i tuoi dati.</div>`;
     return;
   }
   const { movMatches, subMatches, autoMatches } = computeSearchMatches();
@@ -7112,7 +7356,7 @@ function doSearch(keepSelection, keepPage){
     ${bulkBarHtml('search')}`;
 
   const total = movMatches.length + subMatches.length + autoMatches.length;
-  if(!total){ results.innerHTML = `<div class="empty-state"><div class="ic">${ico('helpCircle')}</div>Nessun risultato per i filtri impostati</div>`; return; }
+  if(!total){ results.innerHTML = `<div class="empty-state"><div class="ic">${ico('helpCircle')}</div>Nessun risultato con questi filtri.<br>Prova ad allargare la ricerca o premi "Reset".</div>`; return; }
 
   let html = '';
 
@@ -7524,7 +7768,7 @@ function openSubModal(id){
     <div class="modal-head"><h3>${editing?'Modifica abbonamento':'Nuovo abbonamento'}</h3><button class="close-x" id="sClose">${ico('x')}</button></div>
     <div class="modal-body slim-form">
       <div class="slim-row"><span class="slim-icon">${ico('tag',14)}</span><div class="slim-main field"><label>Servizio</label><input type="text" id="sServizio" value="${editing?esc(editing.servizio):''}" placeholder="Es. Netflix"></div></div>
-      <div class="slim-row"><span class="slim-icon">${ico('wallet',14)}</span><div class="slim-main field"><label>Costo (€)</label><input type="number" step="0.01" id="sCosto" value="${editing&&editing.costo!==null?editing.costo:''}"></div></div>
+      <div class="slim-row"><span class="slim-icon">${ico('wallet',14)}</span><div class="slim-main field"><label>Costo (€)</label><input type="number" step="0.01" inputmode="decimal" id="sCosto" value="${editing&&editing.costo!==null?editing.costo:''}"></div></div>
       <div class="slim-row"><span class="slim-icon">${ico('refreshCw',14)}</span><div class="slim-main field"><label>Periodicità</label><select id="sMesi">${[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>{
           const labels = {1:'Mensile',2:'Bimestrale',3:'Trimestrale',4:'Quadrimestrale',6:'Semestrale',12:'Annuale'};
           return `<option value="${n}">${labels[n] || n+' mesi'}</option>`;
@@ -7754,7 +7998,7 @@ function openAutoHeaderModal(){
       <div class="slim-row"><span class="slim-icon">${ico('tag',14)}</span><div class="slim-main field"><label>Tipo</label><input type="text" id="ahGomTipo" value="${g?esc(g.tipo):''}" placeholder="Estive, Invernali…"></div></div>
       <div class="slim-row"><span class="slim-icon">${ico('scissors',14)}</span><div class="slim-main field"><label>Misura</label><input type="text" id="ahGomCodice" value="${g?esc(g.codice||''):''}" placeholder="225/45 R17 94W"></div></div>
       <div class="slim-row"><span class="slim-icon">${ico('folder',14)}</span><div class="slim-main field"><label>Modello pneumatico</label><input type="text" id="ahGomNome" value="${g?esc(g.nome||''):''}"></div></div>
-      <div class="slim-row"><span class="slim-icon">${ico('wallet',14)}</span><div class="slim-main field"><label>Costo (€)</label><input type="number" step="0.01" id="ahGomCosto" value="${g&&g.costo!==null&&g.costo!==undefined?g.costo:''}"></div></div>
+      <div class="slim-row"><span class="slim-icon">${ico('wallet',14)}</span><div class="slim-main field"><label>Costo (€)</label><input type="number" step="0.01" inputmode="decimal" id="ahGomCosto" value="${g&&g.costo!==null&&g.costo!==undefined?g.costo:''}"></div></div>
       <div class="slim-row"><span class="slim-icon">${ico('calendar',14)}</span><div class="slim-main field"><label>Data acquisto</label><input type="date" id="ahGomData" value="${g?(g.dataAcquisto||''):''}"></div></div>
     </div>
     <div class="modal-foot"><button class="btn" id="ahCancel">Annulla</button><button class="btn btn-primary" id="ahSave">Salva</button></div>
@@ -7798,7 +8042,7 @@ function openScadenzeAllModal(){
       <div class="card-title" style="margin-top:0;">Assicurazione</div>
       <div class="field-row">
         <div class="field"><label>Compagnia</label><input type="text" id="saAssicCompagnia" value="${esc(a.assicurazione.compagnia||'')}"></div>
-        <div class="field"><label>Importo (€)</label><input type="number" step="0.01" id="saAssicImporto" value="${a.assicurazione.importo!==null&&a.assicurazione.importo!==undefined?a.assicurazione.importo:''}"></div>
+        <div class="field"><label>Importo (€)</label><input type="number" step="0.01" inputmode="decimal" id="saAssicImporto" value="${a.assicurazione.importo!==null&&a.assicurazione.importo!==undefined?a.assicurazione.importo:''}"></div>
       </div>
       <div class="field-row">
         <div class="field"><label>Scadenza</label><input type="date" id="saAssicData" value="${a.assicurazione.scadenza||''}"></div>
@@ -7807,7 +8051,7 @@ function openScadenzeAllModal(){
 
       <div class="card-title" style="margin-top:18px;">Bollo</div>
       <div class="field-row">
-        <div class="field"><label>Importo (€)</label><input type="number" step="0.01" id="saBolloImporto" value="${a.bollo.importo!==null&&a.bollo.importo!==undefined?a.bollo.importo:''}"></div>
+        <div class="field"><label>Importo (€)</label><input type="number" step="0.01" inputmode="decimal" id="saBolloImporto" value="${a.bollo.importo!==null&&a.bollo.importo!==undefined?a.bollo.importo:''}"></div>
         <div class="field"><label>Scadenza</label><input type="date" id="saBolloData" value="${a.bollo.scadenza||''}"></div>
       </div>
       <div class="field"><label>Link (facoltativo)</label><input type="text" id="saBolloLink" value="${bolloLink?esc(bolloLink.url):''}" placeholder="https://..."></div>
@@ -8258,7 +8502,7 @@ function openScadenzaModal(tipo){
   const obj = a[tipo];
   const fieldHtml = cfg.fields.map(f=>{
     if(f==='compagnia') return `<div class="field"><label>Compagnia</label><input type="text" id="scadCompagnia" value="${esc(obj.compagnia||'')}"></div>`;
-    if(f==='importo') return `<div class="field"><label>Importo (€)</label><input type="number" step="0.01" id="scadImporto" value="${obj.importo!==null&&obj.importo!==undefined?obj.importo:''}"></div>`;
+    if(f==='importo') return `<div class="field"><label>Importo (€)</label><input type="number" step="0.01" inputmode="decimal" id="scadImporto" value="${obj.importo!==null&&obj.importo!==undefined?obj.importo:''}"></div>`;
     if(f==='scadenza') return `<div class="field"><label>Data scadenza</label><input type="date" id="scadData" value="${obj.scadenza||''}"></div>`;
     if(f==='kmProssimo') return `<div class="field"><label>Prossimo tagliando (km)</label><input type="text" id="scadKm" value="${esc(obj.kmProssimo||'')}" placeholder="Es. 180.000 km"></div>`;
     return '';
@@ -8291,7 +8535,7 @@ function openGommaModal(id){
       </div>
       <div class="field-row">
         <div class="field"><label>Data acquisto</label><input type="date" id="goData" value="${editing?(editing.dataAcquisto||''):''}"></div>
-        <div class="field"><label>Costo (€)</label><input type="number" step="0.01" id="goCosto" value="${editing&&editing.costo!==null?editing.costo:''}"></div>
+        <div class="field"><label>Costo (€)</label><input type="number" step="0.01" inputmode="decimal" id="goCosto" value="${editing&&editing.costo!==null?editing.costo:''}"></div>
       </div>
     </div>
     <div class="modal-foot">
@@ -8329,7 +8573,7 @@ function openManutModal(id){
     <div class="modal-body slim-form">
       <div class="slim-row"><span class="slim-icon">${ico('calendar',14)}</span><div class="slim-main field"><label>Data</label><input type="date" id="anData" value="${editing?(editing.data||''):new Date().toISOString().slice(0,10)}"></div></div>
       <div class="slim-row"><span class="slim-icon">${ico('wrench',14)}</span><div class="slim-main field"><label>Intervento</label><textarea id="anIntervento" rows="2" placeholder="Tagliando, cambio gomme, pastiglie freni…">${editing?esc(editing.intervento):''}</textarea></div></div>
-      <div class="slim-row"><span class="slim-icon">${ico('wallet',14)}</span><div class="slim-main field"><label>Costo (€)</label><input type="number" step="0.01" id="anCosto" value="${editing&&editing.costo!==null?editing.costo:''}"></div></div>
+      <div class="slim-row"><span class="slim-icon">${ico('wallet',14)}</span><div class="slim-main field"><label>Costo (€)</label><input type="number" step="0.01" inputmode="decimal" id="anCosto" value="${editing&&editing.costo!==null?editing.costo:''}"></div></div>
       <div class="slim-row"><span class="slim-icon">${ico('home',14)}</span><div class="slim-main field"><label>Officina</label><input type="text" id="anOfficina" value="${editing?esc(editing.officina||''):''}"></div></div>
     </div>
     <div class="modal-foot">
@@ -9110,7 +9354,11 @@ function renderImpostazioni(){
       <div class="card-title">Aspetto &amp; Privacy</div>
       <div class="theme-toggle-row">
         <div><div style="font-weight:600;font-size:13.5px;">Tema Scuro</div></div>
-        <div class="switch ${isDark?'on':''}" id="themeSwitch"></div>
+        <div class="switch ${isDark?'on':''} ${themeAutoOn()?'disabled':''}" id="themeSwitch"></div>
+      </div>
+      <div class="theme-toggle-row" style="margin-top:8px;">
+        <div><div style="font-weight:600;font-size:13.5px;">Segui sistema</div><div class="page-sub" style="margin-top:2px;">Chiaro/scuro in base alle impostazioni del telefono</div></div>
+        <div class="switch ${themeAutoOn()?'on':''}" id="themeAutoSwitch"></div>
       </div>
       <div class="theme-toggle-row" style="border-top:1px solid var(--border-soft); margin-top:8px; padding-top:14px;">
         <div><div style="font-weight:600;font-size:13.5px;">Colore interfaccia</div></div>
@@ -9224,8 +9472,13 @@ function renderImpostazioni(){
   });
 
   document.getElementById('themeSwitch').onclick = ()=>{
+    if(themeAutoOn()) return;
     const next = currentTheme()==='light' ? 'dark' : 'light';
     applyTheme(next);
+    renderImpostazioni();
+  };
+  document.getElementById('themeAutoSwitch').onclick = ()=>{
+    setThemeAuto(!themeAutoOn());
     renderImpostazioni();
   };
   document.getElementById('privacySwitch').onclick = ()=>{
@@ -9831,12 +10084,14 @@ function init(){
   advanceAutoRenewals();
   gdriveInitOnLoad();
   initDashDefaultPeriod();
-  applyTheme(currentTheme());
+  applyTheme(themeAutoOn() ? (systemPrefersDark() ? 'dark' : 'light') : currentTheme());
   applyPrivacy(privacyOn());
   setSidebarCollapsed(sidebarCollapsedPref());
   checkBackupBanner();
   checkMonthlyBanner();
   initAppUpdateCheck();
+  const fabNewMov = document.getElementById('mobileFabNewMov');
+  if(fabNewMov) fabNewMov.onclick = ()=>openMovModal();
 
   // Fix grafici mobile: resize esplicito al caricamento e ad ogni resize finestra/orientamento
   window.addEventListener('resize', ()=>{
