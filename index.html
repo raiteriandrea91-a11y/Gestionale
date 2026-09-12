@@ -82,6 +82,7 @@ h1,h2,h3,h4,.brand,.nav-item,.stepper-label{font-family:'Space Grotesk',sans-ser
 .money{transition:filter .15s ease; border-radius:4px;}
 html[data-privacy="on"] .money{filter:blur(5px); user-select:none; cursor:default;}
 html[data-privacy="on"] .money:hover, html[data-privacy="on"] .money:active{filter:blur(0);}
+html[data-privacy="on"] .money.privacy-revealed{filter:blur(0);}
 html[data-privacy="on"] canvas{filter:blur(6px); transition:filter .15s ease;}
 html[data-privacy="on"] canvas:hover{filter:blur(0);}
 ::selection{background:var(--mint-dim); color:var(--text);}
@@ -849,7 +850,7 @@ tbody tr:hover .row-actions{opacity:1; pointer-events:auto;}
   .modal-backdrop.settings-page-mode.closing .modal-settings-page{
     animation:settingsPageOut .22s cubic-bezier(.4,0,1,1) both;
   }
-  .modal-settings-page .modal-body{flex:1; overflow-y:auto;}
+  .modal-settings-page .modal-body{flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;}
   .modal-settings-page .modal-head{gap:14px; flex-shrink:0; padding:16px; padding-top:calc(16px + env(safe-area-inset-top, 0px)); justify-content:flex-start;}
   .modal-settings-page .modal-head h3{order:2; font-size:16px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .modal-settings-page .modal-head .close-x{order:1; width:30px; height:30px; background:var(--surface-2); border-radius:9px;}
@@ -2454,6 +2455,18 @@ function togglePrivacyQuick(){
   applyPrivacy(!privacyOn());
   if(currentView==='impostazioni') renderImpostazioni();
 }
+/* Tocco su un importo oscurato: lo rivela in modo permanente (finché non lo ritocchi), senza
+   che il tocco raggiunga anche la card sottostante (che altrimenti si espanderebbe) e senza
+   nascondere gli altri importi già rivelati — ognuno resta indipendente dagli altri. Un solo
+   listener "delegato" in fase di cattura basta per tutta l'app, qualunque sia la schermata. */
+document.addEventListener('click', (e)=>{
+  if(!privacyOn()) return;
+  const el = e.target.closest('.money');
+  if(!el) return;
+  e.stopPropagation();
+  e.preventDefault();
+  el.classList.toggle('privacy-revealed');
+}, true);
 
 /* ==================== ROUTER ==================== */
 let currentView = 'dashboard';
