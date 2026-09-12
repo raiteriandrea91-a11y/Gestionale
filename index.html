@@ -6907,10 +6907,26 @@ async function supabasePushNow(){
   if(!user) return;
   try{
     supabaseSetStatus('sync');
+    const priorLocalUpdated = DB._syncMeta && DB._syncMeta.updatedAt;
+    const { data: existing, error: selErr } = await c.from('app_data').select('id, data').eq('owner', user.id).maybeSingle();
+    if(selErr) throw selErr;
+    const remoteUpdated = existing && existing.data && existing.data._syncMeta && existing.data._syncMeta.updatedAt;
+    // Prima di sovrascrivere, controlliamo che nel frattempo un altro dispositivo non abbia già
+    // salvato qualcosa di più recente di quanto sapessimo noi: altrimenti lo cancelleremmo in
+    // silenzio (è esattamente il bug segnalato con le categorie di Viaggi). Se è successo,
+    // adottiamo il remoto invece di sovrascriverlo e avvisiamo.
+    if(remoteUpdated && (!priorLocalUpdated || remoteUpdated > priorLocalUpdated)){
+      DB = existing.data;
+      ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensureSchemaVersion();
+      localStorage.setItem(LS_KEY, JSON.stringify(DB));
+      invalidateMovIndex();
+      renderCurrentView();
+      toast('Erano arrivati aggiornamenti più recenti da un altro dispositivo: li ho caricati. Se avevi appena modificato qualcosa qui, ricontrollalo.');
+      supabaseSetStatus('connesso');
+      return;
+    }
     DB._syncMeta = DB._syncMeta || {}; DB._syncMeta.updatedAt = new Date().toISOString();
     lastPushedSyncTimestamp = DB._syncMeta.updatedAt;
-    const { data: existing, error: selErr } = await c.from('app_data').select('id').eq('owner', user.id).maybeSingle();
-    if(selErr) throw selErr;
     if(existing){
       const { error } = await c.from('app_data').update({ data: DB, updated_at: new Date().toISOString() }).eq('id', existing.id);
       if(error) throw error;
