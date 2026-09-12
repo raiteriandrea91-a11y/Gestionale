@@ -7004,6 +7004,17 @@ function supabaseInitOnLoad(){
     if(user){ supabaseSetStatus('sync'); supabasePullAndMerge(); supabaseSubscribeRealtime(user); }
   });
 }
+/* Sui telefoni il sistema operativo interrompe la connessione Realtime quando l'app va in
+   background (schermo spento, cambio app) per risparmiare batteria — non si riconnette da sola.
+   Per non dover chiudere e riaprire l'app ogni volta, controlliamo gli aggiornamenti anche solo
+   tornando a guardarla (sblocco schermo, ritorno da un'altra app), non solo al primo avvio. */
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState !== 'visible') return;
+  if(!supabaseConfigured()) return;
+  supabaseCurrentUser().then(user=>{
+    if(user){ supabasePullAndMerge(); supabaseUnsubscribeRealtime(); supabaseSubscribeRealtime(user); }
+  });
+});
 
 /* ---- Impostazioni: card "Account" in cima alla pagina — login/logout + stato sincronizzazione ---- */
 async function renderAccountArea(){
