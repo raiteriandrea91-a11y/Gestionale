@@ -15,7 +15,6 @@
 <meta name="apple-mobile-web-app-title" content="Gestionale">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1154,6 +1153,25 @@ html[data-theme="light"] .import-min-badge{color:#0B3A2E;}
 .add-inline{display:flex; gap:8px; margin-top:10px;}
 .add-inline input{flex:1;}
 .settings-actions{display:flex; gap:10px; flex-wrap:wrap;}
+/* Card "Account" in cima a Impostazioni: avatar con iniziale + pallino di stato sincronizzazione
+   sovrapposto in basso a destra (verde = sincronizzato, blu = in corso, rosso = errore, grigio =
+   non connesso), coerente col linguaggio visivo "online indicator" già familiare. */
+.account-row{display:flex; align-items:center; gap:13px;}
+.account-avatar{
+  position:relative; width:46px; height:46px; border-radius:50%; flex-shrink:0;
+  background:var(--surface-3); color:var(--text); display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:17px; font-family:'Space Grotesk',sans-serif;
+}
+.account-avatar-empty{background:var(--surface-2); border:1.5px dashed var(--border);}
+.account-status-dot{
+  position:absolute; right:-1px; bottom:-1px; width:13px; height:13px; border-radius:50%;
+  background:#8a8f98; border:2.5px solid var(--surface);
+}
+.account-status-dot.online{background:var(--money-pos, #49D9A8);}
+.account-status-dot.syncing{background:var(--blue);}
+.account-status-dot.error{background:var(--coral);}
+.account-name{font-weight:700; font-size:14.5px; color:var(--text);}
+.account-sub{font-size:12px; color:var(--text-dim); margin-top:2px;}
 .settings-link-list{display:flex; flex-direction:column; margin-top:4px;}
 .settings-link-item{
   display:flex; align-items:center; gap:12px; width:100%; background:none; border:none;
@@ -1901,7 +1919,6 @@ function saveDB(){
   DB._syncMeta.updatedAt = new Date().toISOString();
   localStorage.setItem(LS_KEY, JSON.stringify(DB));
   invalidateMovIndex(); // i movimenti possono essere cambiati: l'indice per anno va ricostruito alla prossima richiesta
-  gdriveSchedulePush();
   supabaseSchedulePush();
   if(typeof updateNavBadges==='function') updateNavBadges();
 }
@@ -6829,263 +6846,29 @@ function confirmImport(){
   }, 60);
 }
 
-/* ==================== SINCRONIZZAZIONE GOOGLE DRIVE ==================== */
-const LS_GDRIVE_CLIENT_ID = 'ledger_gdrive_client_id_v1';
-const LS_GDRIVE_CONNECTED = 'ledger_gdrive_connected_v1';
-const LS_GDRIVE_FOLDER_ID = 'ledger_gdrive_folder_id_v1';
-const LS_GDRIVE_FILE_ID = 'ledger_gdrive_file_id_v1';
-const LS_GDRIVE_LAST_SYNC = 'ledger_gdrive_last_sync_v1';
-const GDRIVE_FOLDER_NAME = 'Gestionale Finance Hub — Dati';
-const GDRIVE_FILE_NAME = 'gestionale-db.json';
-const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-
-let gdriveTokenClient = null;
-let gdriveAccessToken = null;
-let gdrivePushTimer = null;
-let gdriveStatus = 'disconnesso'; // disconnesso | connesso | sync | riconnetti | errore
-
-function gdriveClientId(){ return localStorage.getItem(LS_GDRIVE_CLIENT_ID) || ''; }
-function gdriveIsConnected(){ return localStorage.getItem(LS_GDRIVE_CONNECTED)==='1'; }
-
-let gdriveTokenTimeoutId = null;
-function gdriveClearTokenTimeout(){
-  if(gdriveTokenTimeoutId){ clearTimeout(gdriveTokenTimeoutId); gdriveTokenTimeoutId = null; }
-}
-
-function gdriveEnsureTokenClient(){
-  if(gdriveTokenClient) return gdriveTokenClient;
-  if(typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) return null;
-  const clientId = gdriveClientId();
-  if(!clientId) return null;
-  gdriveTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: clientId,
-    scope: GDRIVE_SCOPE,
-    callback: (resp)=>{
-      gdriveClearTokenTimeout();
-      if(resp && resp.access_token){
-        gdriveAccessToken = resp.access_token;
-        localStorage.setItem(LS_GDRIVE_CONNECTED,'1');
-        gdriveOnConnected();
-      } else {
-        gdriveSetStatus('riconnetti');
-      }
-    },
-    error_callback: (err)=>{
-      // Scatta quando Google non riesce nemmeno ad aprire il popup
-      // (es. popup bloccato dal browser in una finestra PWA installata).
-      gdriveClearTokenTimeout();
-      console.error('Google Drive auth error', err);
-      gdriveSetStatus('riconnetti');
-    }
-  });
-  return gdriveTokenClient;
-}
-
-function gdriveRequestToken(promptType){
-  gdriveClearTokenTimeout();
-  // Rete di sicurezza: se dopo 8 secondi non è arrivata né una risposta né un
-  // errore (caso limite in cui il popup resta bloccato senza notificarlo),
-  // usciamo comunque dallo stato "Sincronizzazione in corso" invece di
-  // restarci bloccati a tempo indeterminato.
-  gdriveTokenTimeoutId = setTimeout(()=>{
-    gdriveTokenTimeoutId = null;
-    gdriveSetStatus('riconnetti');
-  }, 8000);
-  gdriveTokenClient.requestAccessToken({ prompt: promptType });
-}
-
-function gdriveConnect(){
-  const clientId = gdriveClientId();
-  if(!clientId){ toast('Inserisci prima il Client ID di Google'); return; }
-  const tc = gdriveEnsureTokenClient();
-  if(!tc){ toast('Libreria Google non ancora pronta, riprova tra un istante'); return; }
-  gdriveRequestToken('consent');
-}
-function gdriveSilentReconnect(){
-  if(!gdriveIsConnected()) return;
-  const tc = gdriveEnsureTokenClient();
-  if(!tc) return;
-  gdriveRequestToken('');
-}
-function gdriveDisconnect(){
-  if(gdriveAccessToken && typeof google!=='undefined' && google.accounts && google.accounts.oauth2){
-    try{ google.accounts.oauth2.revoke(gdriveAccessToken, ()=>{}); }catch(e){}
-  }
-  gdriveAccessToken = null;
-  gdriveTokenClient = null;
-  localStorage.removeItem(LS_GDRIVE_CONNECTED);
-  localStorage.removeItem(LS_GDRIVE_FOLDER_ID);
-  localStorage.removeItem(LS_GDRIVE_FILE_ID);
-  gdriveSetStatus('disconnesso');
-  toast('Google Drive disconnesso');
-  if(currentView==='impostazioni') renderImpostazioni();
-}
-
-async function gdriveApiFetch(url, options={}){
-  options.headers = Object.assign({}, options.headers, { 'Authorization': 'Bearer '+gdriveAccessToken });
-  const res = await fetch(url, options);
-  if(!res.ok){
-    const errText = await res.text().catch(()=>'');
-    throw new Error('Drive API error '+res.status+': '+errText);
-  }
-  return res;
-}
-
-async function gdriveEnsureFolder(){
-  let folderId = localStorage.getItem(LS_GDRIVE_FOLDER_ID);
-  if(folderId) return folderId;
-  const q = encodeURIComponent(`name='${GDRIVE_FOLDER_NAME.replace(/'/g,"\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const res = await gdriveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
-  const data = await res.json();
-  if(data.files && data.files.length){
-    folderId = data.files[0].id;
-  } else {
-    const createRes = await gdriveApiFetch('https://www.googleapis.com/drive/v3/files', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ name: GDRIVE_FOLDER_NAME, mimeType:'application/vnd.google-apps.folder' })
-    });
-    folderId = (await createRes.json()).id;
-  }
-  localStorage.setItem(LS_GDRIVE_FOLDER_ID, folderId);
-  return folderId;
-}
-async function gdriveCreateFile(folderId){
-  const metadata = { name: GDRIVE_FILE_NAME, parents:[folderId], mimeType:'application/json' };
-  const boundary = '-------314159265358979323846gestionale';
-  const body =
-    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`+
-    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(DB)}\r\n`+
-    `--${boundary}--`;
-  const res = await gdriveApiFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
-    method:'POST', headers:{'Content-Type': `multipart/related; boundary=${boundary}`}, body
-  });
-  return (await res.json()).id;
-}
-async function gdriveEnsureFile(folderId){
-  let fileId = localStorage.getItem(LS_GDRIVE_FILE_ID);
-  if(fileId) return fileId;
-  const q = encodeURIComponent(`name='${GDRIVE_FILE_NAME}' and '${folderId}' in parents and trashed=false`);
-  const res = await gdriveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
-  const data = await res.json();
-  fileId = (data.files && data.files.length) ? data.files[0].id : await gdriveCreateFile(folderId);
-  localStorage.setItem(LS_GDRIVE_FILE_ID, fileId);
-  return fileId;
-}
-
-async function gdrivePushNow(){
-  if(!gdriveIsConnected() || !gdriveAccessToken) return;
-  try{
-    gdriveSetStatus('sync');
-    const folderId = await gdriveEnsureFolder();
-    const fileId = await gdriveEnsureFile(folderId);
-    await gdriveApiFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-      method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(DB)
-    });
-    localStorage.setItem(LS_GDRIVE_LAST_SYNC, String(Date.now()));
-    gdriveSetStatus('connesso');
-  }catch(e){ console.error(e); gdriveSetStatus('errore'); }
-}
-function gdriveSchedulePush(){
-  if(!gdriveIsConnected() || !gdriveAccessToken) return;
-  clearTimeout(gdrivePushTimer);
-  gdrivePushTimer = setTimeout(gdrivePushNow, 1500);
-}
-async function gdrivePullAndMerge(){
-  if(!gdriveIsConnected() || !gdriveAccessToken) return;
-  try{
-    gdriveSetStatus('sync');
-    const folderId = await gdriveEnsureFolder();
-    const fileId = await gdriveEnsureFile(folderId);
-    const res = await gdriveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
-    const text = await res.text();
-    if(text && text.trim()){
-      const remote = JSON.parse(text);
-      const remoteUpdated = remote._syncMeta && remote._syncMeta.updatedAt;
-      const localUpdated = DB._syncMeta && DB._syncMeta.updatedAt;
-      if(remoteUpdated && (!localUpdated || remoteUpdated > localUpdated)){
-        DB = remote;
-        ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili();
-        saveDB();
-        toast('Dati aggiornati da Google Drive');
-        renderCurrentView();
-      } else {
-        await gdrivePushNow();
-      }
-    } else {
-      await gdrivePushNow();
-    }
-    localStorage.setItem(LS_GDRIVE_LAST_SYNC, String(Date.now()));
-    gdriveSetStatus('connesso');
-  }catch(e){ console.error(e); gdriveSetStatus('errore'); }
-}
-function gdriveOnConnected(){
-  gdriveSetStatus('connesso');
-  gdrivePullAndMerge();
-  if(currentView==='impostazioni') renderImpostazioni();
-}
-function gdriveSetStatus(s){
-  gdriveStatus = s;
-  renderGDriveStatus();
-}
-function renderGDriveStatus(){
-  const el = document.getElementById('gdriveStatusLine');
-  if(!el) return;
-  const lastSync = parseInt(localStorage.getItem(LS_GDRIVE_LAST_SYNC)||'0',10);
-  const lastSyncTxt = lastSync ? new Date(lastSync).toLocaleString('it-IT') : 'mai';
-  const dotColor = { disconnesso:'#8a8f98', attesa:'#8a8f98', connesso:'#49D9A8', sync:'#5FA8FF', riconnetti:'#F5B95C', errore:'#FF7A66' }[gdriveStatus] || '#8a8f98';
-  const map = {
-    disconnesso: 'Non connesso',
-    attesa: 'Ultimo sync: '+lastSyncTxt+' — premi "Sincronizza dati" per aggiornare',
-    connesso: 'Connesso — ultimo sync: '+lastSyncTxt,
-    sync: 'Sincronizzazione in corso…',
-    riconnetti: 'Sessione scaduta — premi "Sincronizza dati" per riautorizzare',
-    errore: 'Errore di sincronizzazione — riprova (controlla il Client ID e i permessi)'
-  };
-  const syncIcon = gdriveStatus==='sync' ? ico('refreshCw',13) : '';
-  el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};margin-right:6px;vertical-align:1px;"></span>${syncIcon}${map[gdriveStatus] || ''}`;
-}
-function gdriveInitOnLoad(){
-  if(!gdriveIsConnected()) return;
-  // Niente richiesta automatica di accesso a Google all'avvio: evitiamo così
-  // il popup di login ad ogni apertura dell'app. La sincronizzazione parte
-  // solo quando l'utente preme "Sincronizza dati" in Impostazioni.
-  gdriveSetStatus('attesa');
-}
-
-/* ---- Impostazioni: wiring sezione Google Drive ---- */
-function wireGDriveSection(){
-  const clientInput = document.getElementById('gdriveClientId');
-  if(!clientInput) return;
-  document.getElementById('gdriveSaveClientId').onclick = ()=>{
-    const v = clientInput.value.trim();
-    if(!v){ toast('Inserisci un Client ID valido'); return; }
-    localStorage.setItem(LS_GDRIVE_CLIENT_ID, v);
-    toast('Client ID salvato');
-  };
-  const connectBtn = document.getElementById('gdriveConnectBtn');
-  if(connectBtn) connectBtn.onclick = gdriveConnect;
-  const disconnectBtn = document.getElementById('gdriveDisconnectBtn');
-  if(disconnectBtn) disconnectBtn.onclick = gdriveDisconnect;
-  renderGDriveStatus();
-}
-
 /* ==================== SINCRONIZZAZIONE SUPABASE ====================
    Sostituisce Google Drive come backend di sincronizzazione: un'unica riga nella tabella
    "app_data" (colonna jsonb "data") contiene l'intero oggetto DB, protetta da un vero login
-   (Supabase Auth) + RLS lato server. Segue lo stesso schema del blocco Google Drive qui sopra:
-   vive solo in Impostazioni, non blocca mai l'avvio dell'app. */
+   (Supabase Auth) + RLS lato server. Login/logout vivono nella card "Account" in cima a
+   Impostazioni; qui sotto solo la logica. La sincronizzazione è in tempo reale: quando i dati
+   cambiano su un dispositivo, gli altri (con la stessa sessione attiva) lo scoprono via
+   Supabase Realtime senza bisogno di ricaricare la pagina — richiede che la Realtime sia
+   abilitata sulla tabella "app_data" lato Supabase (Database > Replication). */
 const LS_SUPABASE_URL = 'ledger_supabase_url_v1';
 const LS_SUPABASE_KEY = 'ledger_supabase_key_v1';
 const LS_SUPABASE_LAST_SYNC = 'ledger_supabase_last_sync_v1';
 // Valori di base del progetto Supabase: la "publishable key" è pensata per stare nel codice
-// pubblico (non è un segreto, la sicurezza vera è affidata alle policy RLS + login).
-// Impostazioni può comunque sovrascriverli in localStorage, se in futuro cambi progetto o ruoti la chiave.
+// pubblico (non è un segreto, la sicurezza vera è affidata alle policy RLS + login). Non ci sono
+// campi in Impostazioni per modificarli: se in futuro cambi progetto o ruoti la chiave, si
+// aggiornano qui.
 const SUPABASE_URL_DEFAULT = 'https://tkpekqesednpyvfbahav.supabase.co';
 const SUPABASE_KEY_DEFAULT = 'sb_publishable_3a0V4aVVdu31lfxERPznEA_tuj3BEj-';
 
 let sbClient = null;
+let sbRealtimeChannel = null;
 let supabasePushTimer = null;
-let supabaseStatus = 'disconnesso'; // disconnesso | attesa | connesso | sync | errore
+let supabaseStatus = 'disconnesso'; // disconnesso | sync | connesso | errore
+let lastPushedSyncTimestamp = null; // usato per riconoscere ed ignorare l'eco del nostro stesso salvataggio via Realtime
 function supabaseUrlVal(){ return localStorage.getItem(LS_SUPABASE_URL) || SUPABASE_URL_DEFAULT; }
 function supabaseKeyVal(){ return localStorage.getItem(LS_SUPABASE_KEY) || SUPABASE_KEY_DEFAULT; }
 function supabaseConfigured(){ return !!(supabaseUrlVal() && supabaseKeyVal()); }
@@ -7100,7 +6883,7 @@ async function supabaseCurrentUser(){
   const { data } = await c.auth.getSession();
   return (data && data.session) ? data.session.user : null;
 }
-function supabaseSetStatus(s){ supabaseStatus = s; renderSupabaseStatus(); }
+function supabaseSetStatus(s){ supabaseStatus = s; renderAccountArea(); }
 function supabaseSchedulePush(){
   if(!supabaseClient()) return;
   clearTimeout(supabasePushTimer);
@@ -7113,6 +6896,7 @@ async function supabasePushNow(){
   try{
     supabaseSetStatus('sync');
     DB._syncMeta = DB._syncMeta || {}; DB._syncMeta.updatedAt = new Date().toISOString();
+    lastPushedSyncTimestamp = DB._syncMeta.updatedAt;
     const { data: existing, error: selErr } = await c.from('app_data').select('id').eq('owner', user.id).maybeSingle();
     if(selErr) throw selErr;
     if(existing){
@@ -7145,9 +6929,10 @@ async function supabasePullAndMerge(){
         invalidateMovIndex();
         toast('Dati aggiornati da Supabase');
         renderCurrentView();
-      } else {
-        await supabasePushNow();
+      } else if(!remoteUpdated || !localUpdated || localUpdated > remoteUpdated){
+        await supabasePushNow(); // il locale è più recente (o manca ancora una riga remota completa): spediamo il nostro
       }
+      // se sono uguali, siamo già allineati: nessuna azione
     } else {
       await supabasePushNow(); // prima sincronizzazione: la riga remota non esiste ancora, la creiamo
     }
@@ -7155,101 +6940,126 @@ async function supabasePullAndMerge(){
     supabaseSetStatus('connesso');
   }catch(e){ console.error(e); supabaseSetStatus('errore'); }
 }
+/* Realtime: appena la nostra riga cambia su Supabase (da un altro dispositivo), lo veniamo a
+   sapere all'istante e aggiorniamo i dati, senza dover ricaricare la pagina o premere nulla.
+   L'evento generato dal NOSTRO stesso salvataggio viene riconosciuto e ignorato (altrimenti si
+   creerebbe un rimbalzo push→pull→push senza fine). */
+function supabaseSubscribeRealtime(user){
+  const c = supabaseClient(); if(!c || !user || sbRealtimeChannel) return;
+  sbRealtimeChannel = c.channel('app_data_own_row')
+    .on('postgres_changes', { event:'*', schema:'public', table:'app_data', filter:`owner=eq.${user.id}` }, (payload)=>{
+      const remote = payload.new && payload.new.data;
+      const remoteUpdated = remote && remote._syncMeta && remote._syncMeta.updatedAt;
+      if(remoteUpdated && remoteUpdated===lastPushedSyncTimestamp) return; // è l'eco del nostro salvataggio
+      supabasePullAndMerge();
+    })
+    .subscribe();
+}
+function supabaseUnsubscribeRealtime(){
+  if(sbRealtimeChannel){ sbRealtimeChannel.unsubscribe(); sbRealtimeChannel = null; }
+}
 async function supabaseLogin(email, password){
   const c = supabaseClient();
-  if(!c) return { error: 'Salva prima URL e chiave del progetto.' };
-  const { error } = await c.auth.signInWithPassword({ email, password });
+  if(!c) return { error: 'Configurazione Supabase mancante.' };
+  const { data, error } = await c.auth.signInWithPassword({ email, password });
   if(error) return { error: error.message };
   supabaseSetStatus('sync');
   await supabasePullAndMerge();
-  renderImpostazioni();
+  supabaseSubscribeRealtime(data.user);
+  renderAccountArea();
   return {};
 }
 async function supabaseLogout(){
   const c = supabaseClient(); if(!c) return;
+  supabaseUnsubscribeRealtime();
   await c.auth.signOut();
   supabaseSetStatus('disconnesso');
-  renderImpostazioni();
+  renderAccountArea();
 }
 function supabaseInitOnLoad(){
   if(!supabaseConfigured()) return;
   supabaseCurrentUser().then(user=>{
-    if(user){ supabaseSetStatus('sync'); supabasePullAndMerge(); }
+    if(user){ supabaseSetStatus('sync'); supabasePullAndMerge(); supabaseSubscribeRealtime(user); }
   });
 }
-function renderSupabaseStatus(){
-  const el = document.getElementById('supabaseStatusLine');
+
+/* ---- Impostazioni: card "Account" in cima alla pagina — login/logout + stato sincronizzazione ---- */
+async function renderAccountArea(){
+  const el = document.getElementById('accountArea');
   if(!el) return;
-  const lastSync = parseInt(localStorage.getItem(LS_SUPABASE_LAST_SYNC)||'0',10);
-  const lastSyncTxt = lastSync ? new Date(lastSync).toLocaleString('it-IT') : 'mai';
-  const dotColor = { disconnesso:'#8a8f98', connesso:'#49D9A8', sync:'#5FA8FF', errore:'#FF7A66' }[supabaseStatus] || '#8a8f98';
-  const map = {
-    disconnesso: 'Non connesso',
-    connesso: 'Connesso — ultimo sync: '+lastSyncTxt,
-    sync: 'Sincronizzazione in corso…',
-    errore: 'Errore di sincronizzazione — controlla URL/chiave e le policy su Supabase'
-  };
-  const syncIcon = supabaseStatus==='sync' ? ico('refreshCw',13) : '';
-  el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};margin-right:6px;vertical-align:1px;"></span>${syncIcon}${map[supabaseStatus] || ''}`;
-}
-async function renderSupabaseAuthArea(){
-  const el = document.getElementById('supabaseAuthArea');
-  if(!el) return;
-  if(!supabaseConfigured()){
-    el.innerHTML = '<div class="page-sub">Salva prima URL e chiave qui sopra per poter accedere.</div>';
-    return;
-  }
   const user = await supabaseCurrentUser();
   if(user){
-    supabaseStatus = supabaseStatus==='disconnesso' ? 'connesso' : supabaseStatus;
+    const initial = (user.email||'?').charAt(0).toUpperCase();
+    const dotClass = supabaseStatus==='sync' ? 'syncing' : supabaseStatus==='errore' ? 'error' : 'online';
+    const lastSync = parseInt(localStorage.getItem(LS_SUPABASE_LAST_SYNC)||'0',10);
+    const lastSyncTxt = lastSync ? new Date(lastSync).toLocaleString('it-IT') : 'mai';
+    const subTextMap = {
+      sync: 'Sincronizzazione in corso…',
+      errore: 'Errore di sincronizzazione — riprova più tardi',
+      connesso: 'Sincronizzato — ultimo aggiornamento: '+lastSyncTxt
+    };
     el.innerHTML = `
-      <div class="page-sub" style="margin-bottom:10px;">Connesso come <b style="color:var(--text);">${esc(user.email||'')}</b></div>
-      <div class="settings-actions">
-        <button class="btn btn-primary btn-sm" id="supabaseSyncNowBtn">${ico('refreshCw')} Sincronizza ora</button>
-        <button class="btn btn-danger btn-sm" id="supabaseLogoutBtn">Esci</button>
+      <div class="account-row">
+        <div class="account-avatar">${esc(initial)}<span class="account-status-dot ${dotClass}"></span></div>
+        <div class="account-info">
+          <div class="account-name">${esc(user.email||'')}</div>
+          <div class="account-sub">${subTextMap[supabaseStatus] || subTextMap.connesso}</div>
+        </div>
       </div>
+      <button type="button" class="btn btn-danger btn-sm" id="accountLogoutBtn" style="margin-top:12px;">Logout</button>
     `;
-    document.getElementById('supabaseSyncNowBtn').onclick = supabasePullAndMerge;
-    document.getElementById('supabaseLogoutBtn').onclick = supabaseLogout;
+    document.getElementById('accountLogoutBtn').onclick = async ()=>{
+      const ok = await customConfirm('Vuoi disconnetterti? I tuoi dati restano salvati su Supabase, ma questo dispositivo smette di sincronizzarsi finché non rifai il login.', { okLabel:'Esci', danger:true });
+      if(ok) supabaseLogout();
+    };
   } else {
     el.innerHTML = `
-      <div class="field"><label>Email</label><input type="email" id="supabaseEmail" placeholder="tuo@indirizzo.it"></div>
-      <div class="field" style="margin-top:10px;"><label>Password</label><input type="password" id="supabasePassword" placeholder="••••••••"></div>
-      <div class="settings-actions" style="margin-top:10px;">
-        <button class="btn btn-primary btn-sm" id="supabaseLoginBtn">Accedi</button>
+      <div class="account-row">
+        <div class="account-avatar account-avatar-empty"></div>
+        <div class="account-info">
+          <div class="account-name" style="color:var(--text-faint);">Non connesso</div>
+          <div class="account-sub">Fai login per sincronizzare i dati</div>
+        </div>
       </div>
-      <div class="page-sub" id="supabaseLoginError" style="margin-top:8px; color:var(--coral); display:none;"></div>
+      <button type="button" class="btn btn-primary btn-sm" id="accountLoginBtn" style="margin-top:12px;">Login</button>
     `;
-    document.getElementById('supabaseLoginBtn').onclick = async ()=>{
-      const email = document.getElementById('supabaseEmail').value.trim();
-      const password = document.getElementById('supabasePassword').value;
-      const errEl = document.getElementById('supabaseLoginError');
-      if(!email || !password){ errEl.textContent = 'Inserisci email e password.'; errEl.style.display='block'; return; }
-      errEl.style.display = 'none';
-      const btn = document.getElementById('supabaseLoginBtn');
-      btn.disabled = true; btn.textContent = 'Accesso in corso…';
-      const res = await supabaseLogin(email, password);
-      if(res.error){ errEl.textContent = res.error; errEl.style.display='block'; btn.disabled=false; btn.textContent='Accedi'; }
-      else { toast('Accesso effettuato'); }
-    };
+    document.getElementById('accountLoginBtn').onclick = openLoginModal;
   }
 }
-/* ---- Impostazioni: wiring sezione Supabase ---- */
-function wireSupabaseSection(){
-  const urlInput = document.getElementById('supabaseUrl');
-  if(!urlInput) return;
-  document.getElementById('supabaseSaveConfig').onclick = ()=>{
-    const url = urlInput.value.trim();
-    const key = document.getElementById('supabaseKey').value.trim();
-    if(!url || !key){ toast('Inserisci URL e chiave'); return; }
-    localStorage.setItem(LS_SUPABASE_URL, url);
-    localStorage.setItem(LS_SUPABASE_KEY, key);
-    sbClient = null; // forza la ricreazione del client con i nuovi valori
-    toast('Configurazione Supabase salvata');
-    renderSupabaseAuthArea();
+function openLoginModal(){
+  const html = `
+    <div class="modal-head"><h3>Accedi</h3><button class="close-x" id="loginClose">${ico('x')}</button></div>
+    <div class="modal-body slim-form">
+      <div class="slim-row"><span class="slim-icon">${ico('smartphone',14)}</span><div class="slim-main field"><label>Email</label><input type="email" id="loginEmail" placeholder="tuo@indirizzo.it" autocomplete="username"></div></div>
+      <div class="slim-row"><span class="slim-icon">${ico('shield',14)}</span><div class="slim-main field"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"></div></div>
+      <div class="page-sub" id="loginError" style="display:none; color:var(--coral); margin-top:2px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="loginCancel">Annulla</button>
+      <button class="btn btn-primary" id="loginSubmit">Accedi</button>
+    </div>
+  `;
+  const box = document.getElementById('modalBox');
+  box.className = 'modal modal-form';
+  box.innerHTML = html;
+  showModalBackdrop();
+  document.getElementById('loginClose').onclick = closeModal;
+  document.getElementById('loginCancel').onclick = closeModal;
+  const submit = async ()=>{
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    if(!email || !password){ errEl.textContent = 'Inserisci email e password.'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+    const btn = document.getElementById('loginSubmit');
+    btn.disabled = true; btn.textContent = 'Accesso in corso…';
+    const res = await supabaseLogin(email, password);
+    if(res.error){ errEl.textContent = res.error; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Accedi'; }
+    else { closeModal(); toast('Accesso effettuato'); }
   };
-  renderSupabaseStatus();
-  renderSupabaseAuthArea();
+  document.getElementById('loginSubmit').onclick = submit;
+  document.getElementById('loginPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') submit(); });
+  requestAnimationFrame(()=>document.getElementById('loginEmail').focus());
 }
 
 /* ==================== RICERCA ==================== */
@@ -9885,6 +9695,11 @@ function renderImpostazioni(){
     <div class="topbar"><div><div class="page-title">Impostazioni</div><div class="page-sub">Configurazione, tabelle di supporto e backup</div></div></div>
 
     <div class="card settings-section">
+      <div class="card-title">Account</div>
+      <div id="accountArea"></div>
+    </div>
+
+    <div class="card settings-section">
       <div class="card-title">Aspetto &amp; Privacy</div>
       <div class="theme-toggle-row">
         <div><div style="font-weight:600;font-size:13.5px;">Tema Scuro</div></div>
@@ -9943,41 +9758,6 @@ function renderImpostazioni(){
           ${ico('arrowRight')}
         </button>
       </div>
-    </div>
-
-    <div class="card settings-section">
-      <div class="card-title" style="display:flex; align-items:center; gap:8px;">
-        Sincronizzazione Google Drive ${ico('cloud')}
-        <button type="button" class="settings-info-btn settingsInfoToggle" data-target="gdriveInfo" title="Informazioni">${ico('info')}</button>
-      </div>
-      <div class="page-sub settings-info-body" id="gdriveInfo" style="display:none; margin-bottom:12px;">
-        Collega un account Google per tenere sincronizzati automaticamente i dati tra PC e mobile. I dati vengono salvati in un file dedicato dentro la cartella <b>"${GDRIVE_FOLDER_NAME}"</b> sul tuo Drive.
-        <div style="margin-top:8px;">${ico('alertTriangle')} Importante: l'accesso a Google Drive funziona solo se l'app viene aperta da un indirizzo web (es. GitHub Pages) registrato tra le "Authorized JavaScript origins" del progetto Google Cloud — non funziona aprendo il file direttamente dal computer (file://).</div>
-      </div>
-      <div class="field" style="margin-top:12px;"><label>Client ID Google (da Google Cloud Console)</label><input type="text" id="gdriveClientId" value="${esc(gdriveClientId())}" placeholder="xxxxxxxxxx.apps.googleusercontent.com"></div>
-      <div class="settings-actions" style="margin-top:8px;">
-        <button class="btn btn-sm" id="gdriveSaveClientId">Salva Client ID</button>
-        <button class="btn btn-primary btn-sm" id="gdriveConnectBtn">${ico('link')} ${gdriveIsConnected() ? 'Sincronizza dati' : 'Connetti Google Drive'}</button>
-        ${gdriveIsConnected() ? '<button class="btn btn-danger btn-sm" id="gdriveDisconnectBtn">Disconnetti</button>' : ''}
-      </div>
-      <div id="gdriveStatusLine" class="page-sub" style="margin-top:12px; font-weight:600;"></div>
-    </div>
-
-    <div class="card settings-section">
-      <div class="card-title" style="display:flex; align-items:center; gap:8px;">
-        Sincronizzazione Supabase ${ico('cloud')}
-        <button type="button" class="settings-info-btn settingsInfoToggle" data-target="supabaseInfo" title="Informazioni">${ico('info')}</button>
-      </div>
-      <div class="page-sub settings-info-body" id="supabaseInfo" style="display:none; margin-bottom:12px;">
-        URL e chiave del progetto sono già impostati di base nel codice dell'app (la "publishable key" è pubblica per natura, non è un segreto). Ti serve solo fare login con l'email e la password che hai creato su Supabase — i campi qui sotto servono solo se un giorno vuoi cambiare progetto o chiave.
-      </div>
-      <div class="field" style="margin-top:12px;"><label>URL progetto Supabase</label><input type="text" id="supabaseUrl" value="${esc(supabaseUrlVal())}" placeholder="https://xxxxxxxx.supabase.co"></div>
-      <div class="field" style="margin-top:10px;"><label>Publishable key</label><input type="text" id="supabaseKey" value="${esc(supabaseKeyVal())}" placeholder="sb_publishable_..."></div>
-      <div class="settings-actions" style="margin-top:8px;">
-        <button class="btn btn-sm" id="supabaseSaveConfig">Salva configurazione</button>
-      </div>
-      <div id="supabaseAuthArea" style="margin-top:14px;"></div>
-      <div id="supabaseStatusLine" class="page-sub" style="margin-top:12px; font-weight:600;"></div>
     </div>
 
     <div class="card settings-section">
@@ -10048,8 +9828,7 @@ function renderImpostazioni(){
   document.getElementById('btnOpenLinkUtili').onclick = openLinkUtiliModal;
   document.getElementById('btnOpenScorciatoie').onclick = openShortcutsModal;
   document.getElementById('btnOpenImportRules').onclick = openImportRulesModal;
-  wireGDriveSection();
-  wireSupabaseSection();
+  renderAccountArea();
   renderDupCleanupList();
 
   // Backup
@@ -10633,7 +10412,6 @@ function init(){
   loadDB();
   applyNavOrder();
   advanceAutoRenewals();
-  gdriveInitOnLoad();
   supabaseInitOnLoad();
   initDashDefaultPeriod();
   applyTheme(currentTheme());
