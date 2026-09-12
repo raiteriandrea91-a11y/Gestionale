@@ -133,6 +133,8 @@ input::placeholder{color:var(--text-faint);}
 .cat-edit-dialog .field label{font-size:10.5px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:5px;}
 .ec-detail-row{display:flex; align-items:center; gap:8px; margin-bottom:6px;}
 .ec-detail-row .ec-detail-input{flex:1;}
+.ec-dettagli-list{border-top:1px solid var(--border-soft);}
+.ec-dettagli-list:empty{border-top:none;}
 .rimborso-chip{display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:20px;
   border:1px solid var(--border); background:var(--surface-2); color:var(--text-dim); font-size:12.5px;
   font-weight:700; cursor:pointer; user-select:none; transition:.15s;}
@@ -1770,12 +1772,18 @@ function ensureGasolioRef(){
   // (vedi wireCatExpandedCard) invece di restare agganciati a un nome fisso.
   if(!DB.gasolioRef) DB.gasolioRef = { categoria:'Auto', dettaglio:'Gasolio e AdBlue' };
 }
+function ensurePrelieviRef(){
+  // Stesso meccanismo di gasolioRef, ma per la voce "Prelievi": serve a movimentiForTotals per
+  // escluderla dai totali (i prelievi sono uno spostamento di liquidità verso i contanti, non
+  // una spesa — la spesa vera viene registrata a parte quando i contanti vengono usati).
+  if(!DB.prelieviRef) DB.prelieviRef = { categoria:'Altre Uscite', dettaglio:'Prelievi' };
+}
 
 function loadDB(){
   const raw = localStorage.getItem(LS_KEY);
   if(raw){
     try{
-      DB = JSON.parse(raw); ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensureSchemaVersion();
+      DB = JSON.parse(raw); ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensureSchemaVersion();
       let needsSave = ensureNoRimborsoTag();
       if(ensureRimborsoDiIdsArray()) needsSave = true;
       if(needsSave) saveDB();
@@ -1794,6 +1802,7 @@ function loadDB(){
   ensurePianificati();
   ensureAutoLinkUtili();
   ensureGasolioRef();
+  ensurePrelieviRef();
   ensureSchemaVersion();
   ensureNoRimborsoTag();
   ensureRimborsoDiIdsArray();
@@ -6925,7 +6934,7 @@ async function supabasePushNow(){
     // adottiamo il remoto invece di sovrascriverlo e avvisiamo.
     if(remoteUpdated && (!priorLocalUpdated || remoteUpdated > priorLocalUpdated)){
       DB = existing.data;
-      ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensureSchemaVersion();
+      ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensureSchemaVersion();
       localStorage.setItem(LS_KEY, JSON.stringify(DB));
       invalidateMovIndex();
       renderCurrentView();
@@ -6970,7 +6979,7 @@ async function supabasePullAndMerge(){
       const localUpdated = DB._syncMeta && DB._syncMeta.updatedAt;
       if(remoteUpdated && (!localUpdated || remoteUpdated > localUpdated)){
         DB = remote;
-        ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensureSchemaVersion();
+        ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensureSchemaVersion();
         localStorage.setItem(LS_KEY, JSON.stringify(DB));
         invalidateMovIndex();
         showSyncFlash();
@@ -7138,7 +7147,16 @@ function normalizeEtichettaForMatch(t){
   return String(t||'').trim().toLowerCase().replace(/^#/, '');
 }
 function isExcludedFromTotals(m){
-  return Array.isArray(m.etichette) && m.etichette.some(t=>TOTALS_EXCLUDED_TAGS.includes(normalizeEtichettaForMatch(t)));
+  if(Array.isArray(m.etichette) && m.etichette.some(t=>TOTALS_EXCLUDED_TAGS.includes(normalizeEtichettaForMatch(t)))) return true;
+  // I Prelievi sono uno spostamento di liquidità verso i contanti, non una spesa vera: la spesa
+  // effettiva viene registrata a parte (es. dal bot Telegram) quando i contanti vengono usati.
+  // Il confronto è case-insensitive e segue eventuali rinomine tramite DB.prelieviRef.
+  const ref = DB.prelieviRef;
+  if(ref && String(m.categoria||'').trim().toLowerCase()===String(ref.categoria||'').trim().toLowerCase()
+       && String(m.descrizione||'').trim().toLowerCase()===String(ref.dettaglio||'').trim().toLowerCase()){
+    return true;
+  }
+  return false;
 }
 function movimentiForTotals(list){
   // Storno diretto su categoria di spesa: un movimento marcato come "rimborso di una spesa"
@@ -9183,12 +9201,13 @@ function renderCatCardHtml(cat){
         <div class="cat-icon-row" id="ceIconRow" style="padding:0; border-bottom:none; margin-bottom:0; flex-shrink:0;">${CATEGORY_ICON_SET.map(ic=>`<button type="button" class="cat-icon-swatch ${ic===categoryIcon(cat)?'active':''}" data-icon="${ic}" title="${ic}">${ico(ic,15)}</button>`).join('')}</div>
       </div>
       <div class="field" style="margin-bottom:12px;">
-        <label>Dettagli</label>
         ${isAbbonamenti ? `
+          <label>Dettagli</label>
           <div class="page-sub" style="margin:4px 0 10px;">Gestiti automaticamente dagli abbonamenti attivi — aggiungi, rinomina o disattiva un servizio dalla scheda Abbonamenti.</div>
           <button type="button" class="btn btn-sm" id="ceGoAbb">Vai alla scheda Abbonamenti ${ico('arrowRight')}</button>
         ` : `
-          <div id="ceDettagliList"></div>
+          <div id="ceDettagliHeader"></div>
+          <div id="ceDettagliList" class="ec-dettagli-list"></div>
           <button type="button" class="add-link" id="ceAddDetailToggle">+ Aggiungi dettaglio</button>
           <div id="ceNewDetailRow" style="display:none; margin-top:8px;" class="add-inline">
             <input type="text" id="ceNewDetail" placeholder="Nuovo dettaglio…">
@@ -9213,14 +9232,18 @@ function wireCatExpandedCard(cardEl, cat){
   function renderDettagli(){
     if(isAbbonamenti) return;
     const subs = DB.sottocategorie[cat]||[];
+    const headerEl = cardEl.querySelector('#ceDettagliHeader');
     const listEl = cardEl.querySelector('#ceDettagliList');
-    const toolbar = subs.length>1 ? `<div style="display:flex; justify-content:flex-end; margin-bottom:2px;"><button type="button" class="sort-toggle-btn ${dettagliReorder?'active':''}" id="ceDettagliSort">${ico('arrowsSort',12)} ${dettagliReorder?'Fatto':'Ordina'}</button></div>` : '';
-    listEl.innerHTML = toolbar + (subs.length ? subs.map(s=>`
+    headerEl.innerHTML = `<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+      <label style="margin:0; display:flex; align-items:center; gap:6px;">${ico('menu',13)}Dettagli</label>
+      ${subs.length>1 ? `<button type="button" class="sort-toggle-btn ${dettagliReorder?'active':''}" id="ceDettagliSort">${ico('arrowsSort',12)} ${dettagliReorder?'Fatto':'Ordina'}</button>` : ''}
+    </div>`;
+    listEl.innerHTML = subs.length ? subs.map(s=>`
       <div class="ec-detail-row ${dettagliReorder?'reorder-row':''}" data-key="${esc(s)}" data-sub="${esc(s)}" draggable="${dettagliReorder?'true':'false'}">
         ${dettagliReorder?`<span class="reorder-handle">⠿</span>`:''}
         <input type="text" class="ec-detail-input" value="${esc(s)}">
         <span class="ec-detail-del" title="Elimina">${ico('trash',13)}</span>
-      </div>`).join('') : `<div class="empty-state" style="padding:6px 0;">Nessun dettaglio.</div>`);
+      </div>`).join('') : `<div class="empty-state" style="padding:6px 0;">Nessun dettaglio.</div>`;
     if(subs.length>1){
       cardEl.querySelector('#ceDettagliSort').onclick = ()=>{ dettagliReorder = !dettagliReorder; renderDettagli(); };
     }
@@ -9238,6 +9261,7 @@ function wireCatExpandedCard(cardEl, cat){
           DB.movimenti.forEach(m=>{ if(m.categoria===cat && m.descrizione===oldVal) m.descrizione = newVal; });
           renameImportRulesDettaglio(cat, oldVal, newVal);
           if(DB.gasolioRef && DB.gasolioRef.categoria===cat && DB.gasolioRef.dettaglio===oldVal) DB.gasolioRef.dettaglio = newVal;
+          if(DB.prelieviRef && DB.prelieviRef.categoria===cat && DB.prelieviRef.dettaglio===oldVal) DB.prelieviRef.dettaglio = newVal;
           saveDB(); toast('Dettaglio aggiornato');
           renderDettagli();
         }
@@ -9309,6 +9333,7 @@ function wireCatExpandedCard(cardEl, cat){
     renameImportRulesCategoria(cat, nuovoNome);
     if(doCascade){ DB.movimenti.forEach(m=>{ if(m.categoria===cat) m.categoria = nuovoNome; }); }
     if(DB.gasolioRef && DB.gasolioRef.categoria===cat) DB.gasolioRef.categoria = nuovoNome;
+    if(DB.prelieviRef && DB.prelieviRef.categoria===cat) DB.prelieviRef.categoria = nuovoNome;
     saveDB(); toast('Categoria rinominata');
     catExpandedCat = nuovoNome;
     refreshCategorieModal();
