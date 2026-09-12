@@ -340,6 +340,17 @@ button .ic-svg, .btn .ic-svg{vertical-align:-3px;}
 }
 .mobile-fab.show{display:flex;}
 .mobile-fab:active{transform:scale(.93);}
+@media(min-width:881px){ .mobile-fab{display:none !important;} }
+/* Feedback discreto per l'aggiornamento automatico dei dati (Realtime Supabase): appare e
+   scompare in un angolo, senza interrompere ciò che l'utente sta facendo. */
+.sync-flash{
+  position:fixed; top:calc(14px + env(safe-area-inset-top,0px)); right:16px; z-index:200;
+  width:32px; height:32px; border-radius:50%; background:var(--tabbar-bg); border:1px solid var(--border-soft);
+  backdrop-filter:blur(16px) saturate(1.7); -webkit-backdrop-filter:blur(16px) saturate(1.7);
+  display:flex; align-items:center; justify-content:center; color:var(--money-pos);
+  opacity:0; transform:scale(.75); pointer-events:none; transition:opacity .25s ease, transform .25s ease;
+}
+.sync-flash.show{opacity:1; transform:scale(1);}
 
 /* Pulsante "espandi" in fondo alla pillola di navigazione: apre un pannello vetro sospeso sopra
    la tabbar con le sezioni secondarie (Mutuo, Utenze, …), ancorato al bordo destro del pulsante
@@ -1708,6 +1719,7 @@ th.src-col, td.src-col{width:26px; text-align:center; padding-left:0; padding-ri
     <div class="view" id="view-impostazioni"></div>
   </main>
   <div class="mobile-more-panel" id="mobileMorePanel"></div>
+  <div class="sync-flash" id="syncFlash"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></div>
   <nav class="mobile-tabbar" id="mobileTabbar"></nav>
   <button class="mobile-fab" id="mobileFabNewMov" title="Nuovo movimento" aria-label="Nuovo movimento">
     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -6910,6 +6922,16 @@ async function supabasePushNow(){
     supabaseSetStatus('connesso');
   }catch(e){ console.error(e); supabaseSetStatus('errore'); }
 }
+/* Piccola icona che appare/scompare in un angolo quando i dati vengono aggiornati in automatico
+   da Supabase (es. via Realtime da un altro dispositivo) — feedback discreto, non un avviso
+   che interrompe quello che si sta facendo. */
+function showSyncFlash(){
+  const el = document.getElementById('syncFlash');
+  if(!el) return;
+  el.classList.add('show');
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(()=>el.classList.remove('show'), 1400);
+}
 async function supabasePullAndMerge(){
   const c = supabaseClient(); if(!c) return;
   const user = await supabaseCurrentUser();
@@ -6927,7 +6949,7 @@ async function supabasePullAndMerge(){
         ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensureSchemaVersion();
         localStorage.setItem(LS_KEY, JSON.stringify(DB));
         invalidateMovIndex();
-        toast('Dati aggiornati da Supabase');
+        showSyncFlash();
         renderCurrentView();
       } else if(!remoteUpdated || !localUpdated || localUpdated > remoteUpdated){
         await supabasePushNow(); // il locale è più recente (o manca ancora una riga remota completa): spediamo il nostro
