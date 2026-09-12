@@ -1701,12 +1701,18 @@ function ensureSchemaVersion(){
   if(typeof DB.version !== 'number') DB.version = 1; // dati salvati prima dell'introduzione del versioning
   DB.version = DB_SCHEMA_VERSION;
 }
+function ensureGasolioRef(){
+  // Riferimento a categoria/dettaglio usato per le statistiche Gasolio nella scheda Auto:
+  // se l'utente rinomina la voce da Impostazioni, questi valori vengono aggiornati di conseguenza
+  // (vedi wireCatExpandedCard) invece di restare agganciati a un nome fisso.
+  if(!DB.gasolioRef) DB.gasolioRef = { categoria:'Auto', dettaglio:'Gasolio e AdBlue' };
+}
 
 function loadDB(){
   const raw = localStorage.getItem(LS_KEY);
   if(raw){
     try{
-      DB = JSON.parse(raw); ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureSchemaVersion();
+      DB = JSON.parse(raw); ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensureSchemaVersion();
       let needsSave = ensureNoRimborsoTag();
       if(ensureRimborsoDiIdsArray()) needsSave = true;
       if(needsSave) saveDB();
@@ -1724,6 +1730,7 @@ function loadDB(){
   ensureWelfare();
   ensurePianificati();
   ensureAutoLinkUtili();
+  ensureGasolioRef();
   ensureSchemaVersion();
   ensureNoRimborsoTag();
   ensureRimborsoDiIdsArray();
@@ -7683,10 +7690,6 @@ function renderAbbonamenti(){
           <button data-sort="scadenza" class="${subSortMode==='scadenza'?'active':''}">Scadenza</button>
           <button data-sort="prezzo" class="${subSortMode==='prezzo'?'active':''}">Prezzo</button>
         </div>
-        <div class="view-toggle">
-          <button class="vtGridBtn ${subViewMode==='grid'?'active':''}">▦ Griglia</button>
-          <button class="vtListBtn ${subViewMode==='list'?'active':''}">${ico('menu')} Elenco</button>
-        </div>
         <button class="btn btn-primary" id="btnNewSub">+ Nuovo abbonamento</button>
       </div>
     </div>
@@ -7695,10 +7698,6 @@ function renderAbbonamenti(){
         <button data-sort="categoria" class="${subSortMode==='categoria'?'active':''}">Categoria</button>
         <button data-sort="scadenza" class="${subSortMode==='scadenza'?'active':''}">Scadenza</button>
         <button data-sort="prezzo" class="${subSortMode==='prezzo'?'active':''}">Prezzo</button>
-      </div>
-      <div class="view-toggle">
-        <button class="vtGridBtn ${subViewMode==='grid'?'active':''}" title="Griglia" aria-label="Griglia">▦</button>
-        <button class="vtListBtn ${subViewMode==='list'?'active':''}" title="Elenco" aria-label="Elenco">${ico('menu')}</button>
       </div>
     </div>
     <div class="grid kpi-grid" style="grid-template-columns:repeat(2,1fr); margin-bottom:22px;">
@@ -7712,8 +7711,6 @@ function renderAbbonamenti(){
   animateNumber(document.getElementById('kpiSubAnnuale'), subPrevTotals?subPrevTotals.annuale:null, totAnnuale);
   subPrevTotals = {mensile:totMensile, annuale:totAnnuale};
   document.getElementById('btnNewSub').onclick = ()=>openSubModal();
-  document.querySelectorAll('.vtGridBtn').forEach(b=>b.onclick = ()=>{ subViewMode='grid'; renderAbbonamenti(); });
-  document.querySelectorAll('.vtListBtn').forEach(b=>b.onclick = ()=>{ subViewMode='list'; renderAbbonamenti(); });
   document.querySelectorAll('.sortToggle button').forEach(b=>{
     b.onclick = ()=>{
       if(b.dataset.sort===subSortMode) return;
@@ -7920,6 +7917,7 @@ function renderAuto(){
 }
 
 let manutOpen = false; // Storico Manutenzione parte sempre collassato
+let gasolioStatsRange = 'all'; // 'all' | '12m' | '3y' | '5y' — periodo per le card KPI e il riepilogo Gasolio (il grafico resta sempre sugli ultimi 12 mesi)
 
 /* ---- Pneumatici: lista compatta (condivisa tra i due layout) ---- */
 function renderGommeList(){
@@ -8001,23 +7999,75 @@ function computeAutoSpesePerAnno(){
   return { years, values: years.map(y=>byYear[y]) };
 }
 
-/* ---- Gasolio: statistiche di spesa (totale, medie, andamento mensile) ---- */
-function computeGasolioStats(){
-  const rows = movimentiForTotals(DB.movimenti).filter(m=>m.categoria==='Auto' && m.descrizione==='Gasolio' && m.uscite && m.data);
-  const total = rows.reduce((s,m)=>s+m.uscite,0);
+/* ---- Gasolio: statistiche di spesa (totale, medie, andamento mensile, incidenza, costo/km) ----
+   range: 'all' | '12m' | '3y' | '5y' — filtra le card KPI e il riepilogo (incidenza + costo/km);
+   il grafico mensile resta sempre fisso sugli ultimi 12 mesi, indipendentemente dal periodo scelto. */
+function computeGasolioStats(range){
+  range = range || 'all';
+  const norm = s => (s||'').toString().trim().toLowerCase();
+  const refCat = norm(DB.gasolioRef && DB.gasolioRef.categoria);
+  const refDet = norm(DB.gasolioRef && DB.gasolioRef.dettaglio);
+  const allRows = movimentiForTotals(DB.movimenti).filter(m=>norm(m.categoria)===refCat && norm(m.descrizione)===refDet && m.uscite && m.data);
+
+  // Aggregazione completa (serve al grafico, che resta sempre sugli ultimi 12 mesi) e al calcolo costo/km per anno
+  const byMonthAll = {}, byYearAll = {};
+  allRows.forEach(m=>{
+    const km = m.data.slice(0,7); byMonthAll[km] = (byMonthAll[km]||0)+Number(m.uscite);
+    const ky = m.data.slice(0,4); byYearAll[ky] = (byYearAll[ky]||0)+Number(m.uscite);
+  });
+  const monthKeysAll = Object.keys(byMonthAll).sort();
+  const chartMonthKeys = monthKeysAll.slice(-12);
+
+  // Finestra temporale per card KPI + riepilogo
+  const now = new Date();
+  let cutoffKey = null; // 'YYYY-MM', incluso
+  if(range==='12m' || range==='3y' || range==='5y'){
+    const monthsBack = range==='12m' ? 11 : range==='3y' ? 35 : 59;
+    const d = new Date(now.getFullYear(), now.getMonth()-monthsBack, 1);
+    cutoffKey = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  }
+  const rows = cutoffKey ? allRows.filter(m=>m.data.slice(0,7)>=cutoffKey) : allRows;
+
+  const total = rows.reduce((s,m)=>s+Number(m.uscite),0);
   const count = rows.length;
   const avgFillUp = count ? total/count : 0;
-  const byMonth = {};
-  rows.forEach(m=>{ const key = m.data.slice(0,7); byMonth[key] = (byMonth[key]||0)+m.uscite; });
-  const monthKeys = Object.keys(byMonth).sort();
+
   let avgMonthly = 0, avgYearly = 0;
-  if(monthKeys.length){
-    const first = monthKeys[0], last = monthKeys[monthKeys.length-1];
+  if(cutoffKey){
+    const windowMonths = range==='12m' ? 12 : range==='3y' ? 36 : 60;
+    avgMonthly = total/windowMonths;
+    avgYearly = avgMonthly*12;
+  } else if(rows.length){
+    const mk = Array.from(new Set(rows.map(m=>m.data.slice(0,7)))).sort();
+    const first = mk[0], last = mk[mk.length-1];
     const span = (parseInt(last.slice(0,4),10)-parseInt(first.slice(0,4),10))*12 + (parseInt(last.slice(5,7),10)-parseInt(first.slice(5,7),10)) + 1;
-    avgMonthly = total / Math.max(1, span);
-    avgYearly = avgMonthly * 12;
+    avgMonthly = total/Math.max(1,span);
+    avgYearly = avgMonthly*12;
   }
-  return { total, count, avgFillUp, avgMonthly, avgYearly, monthKeys: monthKeys.slice(-12), byMonth };
+
+  // Incidenza sul totale Auto, nello stesso periodo selezionato
+  const totalAuto = movimentiForTotals(DB.movimenti)
+    .filter(m=>norm(m.categoria)===refCat && m.uscite && m.data && (!cutoffKey || m.data.slice(0,7)>=cutoffKey))
+    .reduce((s,m)=>s+Number(m.uscite),0);
+  const pctOfAuto = totalAuto>0 ? (total/totalAuto*100) : null;
+
+  // Costo indicativo al km: solo sugli anni con lettura km di fine anno registrata,
+  // limitati agli ultimi N anni corrispondenti al periodo scelto (i km si registrano una volta l'anno, al 31/12)
+  const kmAnni = (DB.auto && DB.auto.kmAnnuali && DB.auto.kmAnnuali.anni) || {};
+  let anniConsiderati = Object.keys(kmAnni);
+  if(range!=='all'){
+    const yearsBack = range==='12m' ? 1 : range==='3y' ? 3 : 5;
+    const minYear = now.getFullYear()-yearsBack+1;
+    anniConsiderati = anniConsiderati.filter(y=>Number(y)>=minYear);
+  }
+  let gasolioAnniCompleti = 0, kmAnniCompleti = 0;
+  anniConsiderati.forEach(y=>{
+    gasolioAnniCompleti += (byYearAll[y]||0);
+    kmAnniCompleti += (kmAnni[y].annuali||0);
+  });
+  const costoKm = kmAnniCompleti>0 ? gasolioAnniCompleti/kmAnniCompleti : null;
+
+  return { total, count, avgFillUp, avgMonthly, avgYearly, pctOfAuto, costoKm, costoKmAnniCount: anniConsiderati.length, chartMonthKeys, byMonth: byMonthAll };
 }
 
 /* ---- Storico km: solo elenco anni (usata dal nuovo layout, senza le 2 card KPI) ---- */
@@ -8232,7 +8282,7 @@ function renderAutoNew(){
   const speseUltimoAnnoLabel = speseAnnoAll.years.length ? speseAnnoAll.years[speseAnnoAll.years.length-1] : '';
   const speseAnno = { years: speseAnnoAll.years.slice(-5), values: speseAnnoAll.values.slice(-5) };
 
-  const { assic: assicLink, bollo: bolloLink, amazon: amazonLink } = splitAutoLinks();
+  const { assic: assicLink, bollo: bolloLink } = splitAutoLinks();
 
   el.innerHTML = `
     <div class="topbar">
@@ -8249,12 +8299,8 @@ function renderAutoNew(){
           <span class="auto-park-icon">${ico('car')}</span>
         </div>
         ${a.cilindrata ? `<div style="margin-top:2px; font-size:12.5px; color:var(--text-dim); padding-left:26px;">${esc(a.cilindrata)}</div>` : ''}
-        <div style="margin-top:6px; font-size:12px; color:var(--text-faint); padding-left:26px; display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+        <div style="margin-top:6px; font-size:12px; color:var(--text-faint); padding-left:26px;">
           <span>${fmtKm(a.kmAnnuali.kmIniziali)} km all'acquisto</span>
-          <span style="color:var(--border-soft);">•</span>
-          ${amazonLink && amazonLink.url
-            ? `<a href="${esc(linkUtiliHref(amazonLink.url))}" target="_blank" rel="noopener" style="color:var(--text-faint);text-decoration:none;">Lista Amazon</a>`
-            : `<span style="opacity:.6;">Lista Amazon</span>`}
         </div>
         ${a.gomme[0] ? `<div style="margin-top:2px; font-size:12px; color:var(--text-faint); padding-left:26px;">
           ${ico('disc',12)} ${esc(a.gomme[0].tipo)}${a.gomme[0].codice?' · '+esc(a.gomme[0].codice):''}${a.gomme[0].nome?' · '+esc(a.gomme[0].nome):''}
@@ -8337,7 +8383,15 @@ function renderAutoNew(){
     </div>
 
     <div class="card" style="margin-bottom:22px;">
-      <div class="card-title">${ico('droplet')} Gasolio</div>
+      <div class="topbar" style="margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">${ico('droplet')} Gasolio</div>
+        <div class="view-toggle" id="gasolioRangeToggle">
+          <button data-range="all" class="${gasolioStatsRange==='all'?'active':''}">Tutto</button>
+          <button data-range="12m" class="${gasolioStatsRange==='12m'?'active':''}">12M</button>
+          <button data-range="3y" class="${gasolioStatsRange==='3y'?'active':''}">3A</button>
+          <button data-range="5y" class="${gasolioStatsRange==='5y'?'active':''}">5A</button>
+        </div>
+      </div>
       <div class="grid kpi-grid" style="margin-bottom:16px;">
         <div class="kpi-card">
           <div class="kpi-bar" style="background:var(--coral);"></div>
@@ -8360,6 +8414,7 @@ function renderAutoNew(){
           <div class="kpi-value" id="kpiGasolioRifornimento"></div>
         </div>
       </div>
+      <div id="gasolioInsights" style="margin-bottom:14px;"></div>
       <div class="chart-wrap-sm"><canvas id="chartGasolio"></canvas></div>
     </div>
 
@@ -8399,18 +8454,34 @@ function renderAutoNew(){
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+ctx.parsed.y.toLocaleString('it-IT',{style:'currency',currency:'EUR'})}}}, scales:{ x:{ grid:{display:false}, ticks:{color:textColor,font:{size:11}} }, y:{ grid:{color:gridColor}, ticks:{color:textColor,font:{size:11}, callback:v=>'€'+v} } } }
   });
 
-  // ---- Gasolio: KPI + andamento mensile (ultimi 12 mesi) ----
-  const gasolio = computeGasolioStats();
+  // ---- Gasolio: KPI + insight (periodo selezionabile) + andamento mensile (grafico sempre fisso a 12 mesi) ----
+  const gasolio = computeGasolioStats(gasolioStatsRange);
   animateNumber(document.getElementById('kpiGasolioTotale'), null, gasolio.total, fmtEUR);
   animateNumber(document.getElementById('kpiGasolioMensile'), null, gasolio.avgMonthly, fmtEUR);
   animateNumber(document.getElementById('kpiGasolioAnnua'), null, gasolio.avgYearly, fmtEUR);
   animateNumber(document.getElementById('kpiGasolioRifornimento'), null, gasolio.avgFillUp, fmtEUR);
+
+  document.querySelectorAll('#gasolioRangeToggle button').forEach(b=>b.onclick = ()=>{
+    gasolioStatsRange = b.dataset.range;
+    renderAuto();
+  });
+
+  const insightsEl = document.getElementById('gasolioInsights');
+  const insightRows = [];
+  if(gasolio.pctOfAuto!=null) insightRows.push(`<div class="info-row"><span>Incidenza sulla spesa Auto</span><b>${gasolio.pctOfAuto.toFixed(0)}%</b></div>`);
+  if(gasolio.costoKm!=null) insightRows.push(`<div class="info-row"><span>Costo indicativo al km <span style="color:var(--text-faint);">(${gasolio.costoKmAnniCount} ${gasolio.costoKmAnniCount===1?'anno con lettura completa':'anni con lettura completa'})</span></span><b>${gasolio.costoKm.toLocaleString('it-IT',{minimumFractionDigits:3,maximumFractionDigits:3})} €/km</b></div>`);
+  insightsEl.innerHTML = insightRows.join('');
+
+  const gasolioValues = gasolio.chartMonthKeys.map(k=>gasolio.byMonth[k]||0);
+  const gasolioMax = gasolioValues.length ? Math.max(...gasolioValues) : 0;
+  const gasolioColors = gasolioValues.map(v=>v===gasolioMax && gasolioMax>0 ? '#FF7A66' : '#F5B95C');
+
   if(charts.autoGasolio) charts.autoGasolio.destroy();
   charts.autoGasolio = new Chart(document.getElementById('chartGasolio'), {
     type:'bar',
     data:{
-      labels: gasolio.monthKeys.map(k=>monthName(parseInt(k.slice(5,7),10)).slice(0,3)+' \''+k.slice(2,4)),
-      datasets:[{ data: gasolio.monthKeys.map(k=>gasolio.byMonth[k]||0), backgroundColor:'#F5B95C', borderRadius:4, maxBarThickness:26 }]
+      labels: gasolio.chartMonthKeys.map(k=>monthName(parseInt(k.slice(5,7),10)).slice(0,3)+' \''+k.slice(2,4)),
+      datasets:[{ data: gasolioValues, backgroundColor: gasolioColors, borderRadius:4, maxBarThickness:26 }]
     },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+ctx.parsed.y.toLocaleString('it-IT',{style:'currency',currency:'EUR'})}}}, scales:{ x:{ grid:{display:false}, ticks:{color:textColor,font:{size:10.5}} }, y:{ grid:{color:gridColor}, ticks:{color:textColor,font:{size:11}, callback:v=>'€'+v} } } }
   });
@@ -8923,6 +8994,7 @@ function wireCatExpandedCard(cardEl, cat){
           if(idx>-1) arr[idx] = newVal;
           DB.movimenti.forEach(m=>{ if(m.categoria===cat && m.descrizione===oldVal) m.descrizione = newVal; });
           renameImportRulesDettaglio(cat, oldVal, newVal);
+          if(DB.gasolioRef && DB.gasolioRef.categoria===cat && DB.gasolioRef.dettaglio===oldVal) DB.gasolioRef.dettaglio = newVal;
           saveDB(); toast('Dettaglio aggiornato');
           renderDettagli();
         }
@@ -8993,6 +9065,7 @@ function wireCatExpandedCard(cardEl, cat){
     if(DB.categorieIcone[cat]!==undefined){ DB.categorieIcone[nuovoNome] = DB.categorieIcone[cat]; delete DB.categorieIcone[cat]; }
     renameImportRulesCategoria(cat, nuovoNome);
     if(doCascade){ DB.movimenti.forEach(m=>{ if(m.categoria===cat) m.categoria = nuovoNome; }); }
+    if(DB.gasolioRef && DB.gasolioRef.categoria===cat) DB.gasolioRef.categoria = nuovoNome;
     saveDB(); toast('Categoria rinominata');
     catExpandedCat = nuovoNome;
     refreshCategorieModal();
