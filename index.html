@@ -1741,7 +1741,7 @@ th.src-col, td.src-col{width:26px; text-align:center; padding-left:0; padding-ri
 <div class="print-report" id="printReport"></div>
 
 <script>
-const SEED_DATA = {"movimenti":[{"data":"2025-10-01","categoria":"Abbonamenti","descrizione":"WindTre","entrate":null,"uscite":14.99,"note":null,"id":"m1"},{"data":"2025-09-29","categoria":"Auto","descrizione":"Gasolio e AdBlue","entrate":null,"uscite":80,"note":null,"id":"m3"},{"data":"2025-09-29","categoria":"Svago","descrizione":"Uscite e Cibo","entrate":null,"uscite":12,"note":"Stadio","id":"m4"},{"data":"2025-09-15","categoria":"Acquisti","descrizione":"Vari","entrate":null,"uscite":100,"note":"Regalo Matte Giulia","id":"m14"},{"data":"2025-09-12","categoria":"Stipendio","descrizione":null,"entrate":1615,"uscite":null,"note":null,"id":"m17"},{"data":"2025-07-31","categoria":"Salute e benessere","descrizione":"Parrucchiere","entrate":null,"uscite":30,"note":null,"id":"m97"},{"data":"2025-07-01","categoria":"Rimborsi","descrizione":null,"entrate":510,"uscite":null,"note":"Rimborso mamma Bollette Matrimoni","id":"m133"},{"data":"2025-07-01","categoria":"Stipendio","descrizione":null,"entrate":1370,"uscite":null,"note":"Quattordicesima","id":"m134"},{"data":"2025-06-02","categoria":"Viaggi","descrizione":"Uscite e cibo","entrate":null,"uscite":3,"note":null,"id":"m151"},{"data":"2025-03-03","categoria":"Altre Uscite","descrizione":"Prestiti","entrate":null,"uscite":250,"note":"Prestito mamma (Punto)","id":"m230"},{"data":"2024-12-31","categoria":"Altre entrate","descrizione":null,"entrate":100,"uscite":null,"note":"Versamento","id":"m276"},{"data":"2024-12-22","categoria":"Altre Uscite","descrizione":"Prestiti","entrate":null,"uscite":55,"note":"Juventus - Milan (Riccardello)","id":"m285","etichette":["Rimborsato"]},{"data":"2024-12-21","categoria":"Altre Uscite","descrizione":"Prestiti","entrate":55,"uscite":null,"note":"Juventus - Milan (Riccardello)","id":"m289","rimborsoSpesa":true,"rimborsoDiId":"m285"},{"data":"2024-12-13","categoria":"Casa","descrizione":"Luce","entrate":null,"uscite":176.48,"note":null,"id":"m296"},{"data":"2023-06-21","categoria":"Casa","descrizione":"Spesa","entrate":null,"uscite":54.81,"note":null,"id":"m764"}],"categorieUscite":["Svago","Auto","Abbonamenti","Acquisti","Casa","Salute e benessere","Viaggi","Altre Uscite"],"categorieEntrate":["Stipendio","Rimborsi","Altre entrate"],"sottocategorie":{"Svago":["Uscite e Cibo","Eventi e Attività","Cinema","Stadio"],"Auto":["Gasolio e AdBlue","Pedaggi e Parcheggi","Accessori e Lavaggi","Manutenzione","Assicurazione","Bollo","Revisione","Multe"],"Abbonamenti":["Iliad","WindTre","Amazon Prime","Spotify","Google One","Office 365","Netflix","Dazn","Palestra","Youtube Premium","HBO Max"],"Acquisti":["Abbigliamento e Accessori","Tech e Strumenti","In-App e Software","Regali e Donazioni","Cura Personale","Vari"],"Casa":["Spesa","Arredamento e Utensili","Luce","Gas","Acqua","Rifiuti","Manutenzione e Bricolage","Mutuo"],"Salute e benessere":["Parrucchiere","Farmacia","Dentista","Visite"],"Viaggi":["Trasporti","Alloggi","Uscite e cibo","Attività e spese extra"],"Altre Uscite":["Prelievi","Prestiti","Costo fisso c/c","Altro"],"Stipendio":["Stipendio"],"Altre entrate":["Versamenti","Varie"]},"metodiPagamento":["Conto corrente","PayPal","Satispay","Revolut","Bancomat/Contanti"],"abbonamenti":[{"avviso":false,"stato":"Attivo","servizio":"Iliad","costo":7.99,"mesi":1,"costoMensile":7.99,"rinnovo":"Automatico","metodoPagamento":"Conto corrente","scadenza":"2025-06-23","id":"a1","categoriaAbb":"Primari"},{"avviso":false,"stato":"Attivo","servizio":"WindTre","costo":14.99,"mesi":1,"costoMensile":14.99,"rinnovo":"Automatico","metodoPagamento":"Conto corrente","scadenza":"2025-07-01","id":"a2","categoriaAbb":"Primari"},{"avviso":true,"stato":"Attivo","servizio":"Amazon Prime","costo":49.9,"mesi":12,"costoMensile":4.158333333333333,"rinnovo":"Automatico","metodoPagamento":"Revolut","scadenza":"2025-12-01","id":"a3","categoriaAbb":"Intrattenimento"},{"avviso":true,"stato":"Attivo","servizio":"Spotify","costo":11.99,"mesi":1,"costoMensile":11.99,"rinnovo":"Automatico","metodoPagamento":"PayPal","scadenza":"2026-02-08","id":"a4","categoriaAbb":"Intrattenimento"},{"avviso":true,"stato":"Attivo","servizio":"Google One","costo":19.99,"mesi":12,"costoMensile":1.6658333333333333,"rinnovo":"Automatico","metodoPagamento":"Paypal","scadenza":"2027-01-19","id":"a5","categoriaAbb":"Produttività"},{"avviso":true,"stato":"Attivo","servizio":"Office 365","costo":99,"mesi":12,"costoMensile":8.25,"rinnovo":"Manuale","metodoPagamento":"Paypal","scadenza":"2026-11-05","id":"a6","categoriaAbb":"Produttività"},{"avviso":true,"stato":"Attivo","servizio":"Netflix","costo":6.99,"mesi":1,"costoMensile":6.99,"rinnovo":"Automatico","metodoPagamento":"PayPal","scadenza":"2025-06-19","id":"a7","categoriaAbb":"Intrattenimento"},{"avviso":false,"stato":"Non attivo","servizio":"Disney+","costo":null,"mesi":null,"costoMensile":null,"rinnovo":null,"metodoPagamento":null,"scadenza":null,"id":"a8","categoriaAbb":"Intrattenimento"},{"avviso":true,"stato":"Attivo","servizio":"Dazn","costo":180,"mesi":12,"costoMensile":15,"rinnovo":"Manuale","metodoPagamento":"Satispay","scadenza":"2025-08-25","id":"a9","categoriaAbb":"Intrattenimento"},{"avviso":true,"stato":"Attivo","servizio":"Palestra","costo":null,"mesi":null,"costoMensile":null,"rinnovo":null,"metodoPagamento":null,"scadenza":null,"id":"a10","categoriaAbb":"Salute & Benessere"},{"avviso":true,"stato":"Attivo","servizio":"Youtube Premium","costo":13.99,"mesi":1,"costoMensile":13.99,"rinnovo":"Automatico","metodoPagamento":"PayPal","scadenza":"2025-07-15","id":"a11","categoriaAbb":"Intrattenimento"},{"avviso":false,"stato":"Attivo","servizio":"Hbo Max","costo":5.99,"mesi":1,"costoMensile":5.99,"rinnovo":"Automatico","metodoPagamento":"PayPal","scadenza":"2026-01-19","id":"a12","categoriaAbb":"Intrattenimento"},{"avviso":false,"stato":"Non attivo","servizio":"Altro 3","costo":null,"mesi":null,"costoMensile":null,"rinnovo":null,"metodoPagamento":null,"scadenza":null,"id":"a13","categoriaAbb":"Altro"},{"avviso":false,"stato":"Non attivo","servizio":"Altro 4","costo":null,"mesi":null,"costoMensile":null,"rinnovo":null,"metodoPagamento":null,"scadenza":null,"id":"a14","categoriaAbb":"Altro"}],"avvisiScadenze":[{"servizio":"Assicurazione auto","scadenza":"2026-11-04","tempisticaAvviso":"10 giorni","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":null,"msgScadenza":"Assicurazione auto in scadenza.","msgScaduto":"Assicurazione auto scaduta."},{"servizio":"Bollo auto","scadenza":"2026-11-02","tempisticaAvviso":"Mese corrente","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":null,"msgScadenza":"Bollo auto in scadenza questo mese.","msgScaduto":"Bollo auto scaduto."},{"servizio":"Revisione auto","scadenza":"2026-11-30","tempisticaAvviso":"Mese corrente","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":null,"msgScadenza":"Revisione auto in scadenza questo mese.","msgScaduto":"Revisione auto scaduta."},{"servizio":"Iliad","scadenza":"2025-06-23","tempisticaAvviso":"-","statoAvviso":false,"mesiRinnovo":1,"tipoRinnovo":"Automatico","msgScadenza":null,"msgScaduto":null},{"servizio":"WindTre","scadenza":"2025-07-01","tempisticaAvviso":"-","statoAvviso":false,"mesiRinnovo":1,"tipoRinnovo":"Automatico","msgScadenza":null,"msgScaduto":null},{"servizio":"Amazon Prime","scadenza":"2025-12-01","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":"Automatico","msgScadenza":"Abbonamento ad Amazon Prime in scadenza.","msgScaduto":"Abbonamento ad Amazon Prime scaduto."},{"servizio":"Spotify","scadenza":"2026-02-08","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":1,"tipoRinnovo":"Automatico","msgScadenza":null,"msgScaduto":null},{"servizio":"Google One","scadenza":"2027-01-19","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":"Automatico","msgScadenza":"Abbonamento a Google One in scadenza.","msgScaduto":"Abbonamento a Google One scaduto."},{"servizio":"Office 365","scadenza":"2026-11-05","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":"Manuale","msgScadenza":"Abbonamento a Office 365 in scadenza.","msgScaduto":"Abbonamento a Office 365 scaduto."},{"servizio":"Netflix","scadenza":"2025-06-19","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":1,"tipoRinnovo":"Automatico","msgScadenza":"Abbonamento a Netflix in scadenza.","msgScaduto":"Abbonamento a Netflix scaduto."},{"servizio":"Disney+","scadenza":null,"tempisticaAvviso":"7 giorni","statoAvviso":false,"mesiRinnovo":0,"tipoRinnovo":0,"msgScadenza":"Abbonamento a Disney+ in scadenza.","msgScaduto":"Abbonamento a Disney+ scaduto."},{"servizio":"Dazn","scadenza":"2025-08-25","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":"Manuale","msgScadenza":"Abbonamento a Dazn in scadenza.","msgScaduto":"Abbonamento a Dazn scaduto."},{"servizio":"Piscina","scadenza":null,"tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":0,"tipoRinnovo":0,"msgScadenza":"Abbonamento in piscina in scadenza.","msgScaduto":"Abbonamento in piscina scaduto."},{"servizio":"Youtube Premium","scadenza":"2025-07-15","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":1,"tipoRinnovo":"Automatico","msgScadenza":"Abbonamento a Youtube Premium in scadenza.","msgScaduto":"Abbonamento a Youtube Premium scaduto."}],"auto":{"assicurazione":{"scadenza":"2026-11-04","importo":479,"compagnia":"Unipol Sai"},"bollo":{"scadenza":"2026-11-02","importo":262.08},"revisione":{"scadenza":"2026-11-30"},"tagliando":{"kmProssimo":"180.000 km"},"kmAnnuali":{"dataInizio":"2022-05-04","anni":{"2022":{"annuali":13524,"totali":75524},"2023":{"annuali":20006,"totali":95530},"2024":{"annuali":21670,"totali":117200},"2025":{"annuali":22800,"totali":140000}},"kmIniziali":61000},"gomme":[{"tipo":"4 stagioni","codice":"225/45 r17 94W","nome":"Pirelli Powergy Sf","dataAcquisto":"2025-04-25","kmAcquisto":null,"costo":356.63,"id":"gom1"}],"linkUtili":[{"categoria":"Assicurazione","link1":"Sito UnipolSai","link2":"Contratto UnipolSai"},{"categoria":"Bollo","link1":"Sito Sistema Piemonte","link2":"Ricevute bolli"},{"categoria":"Auto","link1":"Forum Peugeot","link2":"Manuale Peugeot 308"},{"categoria":"Ricambi","link1":"Lista Amazon","link2":null}],"manutenzione":[{"data":"2026-07-05","intervento":"Tagliando - Gomma nuova ant dx - Pastiglie freni - Risolto rumore","costo":333,"officina":"Coldani Paolo","id":"man1"},{"data":"2025-05-30","intervento":"Esclusione sistema AdBlue","costo":350,"officina":"Coldani Paolo","id":"man2"},{"data":"2025-05-14","intervento":"Montaggio 4 stagioni e smaltimento gomme","costo":60,"officina":"Coldani Paolo","id":"man3"},{"data":"2025-02-14","intervento":"Sostituzione radiatore bucato","costo":400,"officina":"Coldani Paolo","id":"man4"},{"data":"2024-11-18","intervento":"Revisione","costo":80,"officina":"Lu","id":"man5"},{"data":"2024-11-15","intervento":"Montaggio gomme invernali - Saldatura cerchio crepato (Montato post dx)","costo":80,"officina":"Coldani Paolo","id":"man6"},{"data":"2024-06-12","intervento":"Cambio ammortizzatori anteriori - Manutenzione cambio automatico","costo":585,"officina":"Coldani Paolo","id":"man7"},{"data":"2024-05-06","intervento":"Montaggio gomme estive","costo":40,"officina":"Coldani Paolo","id":"man8"},{"data":"2023-11-17","intervento":"Montaggio gomme invernali","costo":40,"officina":"Coldani Paolo","id":"man9"},{"data":"2023-10-09","intervento":"Sostituzione batteria","costo":170,"officina":"Coldani Paolo","id":"man10"},{"data":"2023-10-05","intervento":"Tagliando - Cambio pinze freni","costo":318,"officina":"Coldani Paolo","id":"man11"},{"data":"2023-05-25","intervento":"Montaggio gomme estive","costo":35,"officina":"Coldani Paolo","id":"man12"},{"data":"2022-11-17","intervento":"Montaggio gomme invernali","costo":30,"officina":"Coldani Paolo","id":"man13"},{"data":"2022-11-17","intervento":"Revisione","costo":100,"officina":"Coldani Paolo","id":"man14"},{"data":"2022-10-12","intervento":"Sostituzione paraurti anteriore e fanale destro","costo":1800,"officina":"Carrozzeria Italia","id":"man15"},{"data":"2022-09-12","intervento":"Tagliando","costo":155,"officina":"Coldani Paolo","id":"man16"}],"modello":"Peugeot 308 II 1.5 BlueHDi 130 CV"},"etichette":["Rimborsato"]};
+const SEED_DATA = {"movimenti":[{"data":"2025-10-01","categoria":"Abbonamenti","descrizione":"WindTre","entrate":null,"uscite":14.99,"note":null,"id":"m1"},{"data":"2025-09-29","categoria":"Auto","descrizione":"Gasolio e AdBlue","entrate":null,"uscite":80,"note":null,"id":"m3"},{"data":"2025-09-29","categoria":"Svago","descrizione":"Uscite e Cibo","entrate":null,"uscite":12,"note":"Stadio","id":"m4"},{"data":"2025-09-15","categoria":"Acquisti","descrizione":"Vari","entrate":null,"uscite":100,"note":"Regalo Matte Giulia","id":"m14"},{"data":"2025-09-12","categoria":"Stipendio","descrizione":null,"entrate":1615,"uscite":null,"note":null,"id":"m17"},{"data":"2025-07-31","categoria":"Salute e benessere","descrizione":"Parrucchiere","entrate":null,"uscite":30,"note":null,"id":"m97"},{"data":"2025-07-01","categoria":"Rimborsi","descrizione":null,"entrate":510,"uscite":null,"note":"Rimborso mamma Bollette Matrimoni","id":"m133"},{"data":"2025-07-01","categoria":"Stipendio","descrizione":null,"entrate":1370,"uscite":null,"note":"Quattordicesima","id":"m134"},{"data":"2025-06-02","categoria":"Viaggi","descrizione":"Uscite e cibo","entrate":null,"uscite":3,"note":null,"id":"m151"},{"data":"2025-03-03","categoria":"Altre Uscite","descrizione":"Prestiti","entrate":null,"uscite":250,"note":"Prestito mamma (Punto)","id":"m230"},{"data":"2024-12-31","categoria":"Altre entrate","descrizione":null,"entrate":100,"uscite":null,"note":"Versamento","id":"m276"},{"data":"2024-12-22","categoria":"Altre Uscite","descrizione":"Prestiti","entrate":null,"uscite":55,"note":"Juventus - Milan (Riccardello)","id":"m285","etichette":["Rimborsato"]},{"data":"2024-12-21","categoria":"Altre Uscite","descrizione":"Prestiti","entrate":55,"uscite":null,"note":"Juventus - Milan (Riccardello)","id":"m289","rimborsoSpesa":true,"rimborsoDiId":"m285"},{"data":"2024-12-13","categoria":"Casa","descrizione":"Luce","entrate":null,"uscite":176.48,"note":null,"id":"m296"},{"data":"2023-06-21","categoria":"Casa","descrizione":"Spesa","entrate":null,"uscite":54.81,"note":null,"id":"m764"}],"categorieUscite":["Svago","Auto","Abbonamenti","Acquisti","Casa","Salute e benessere","Viaggi","Altre Uscite"],"categorieEntrate":["Stipendio","Rimborsi","Altre entrate"],"sottocategorie":{"Svago":["Uscite e Cibo","Eventi e Attività","Cinema","Stadio"],"Auto":["Gasolio e AdBlue","Pedaggi e Parcheggi","Accessori e Lavaggi","Manutenzione","Assicurazione","Bollo","Revisione","Multe"],"Abbonamenti":["Iliad","WindTre","Amazon Prime","Spotify","Google One","Office 365","Netflix","Dazn","Palestra","Youtube Premium","HBO Max"],"Acquisti":["Abbigliamento e Accessori","Tech e Strumenti","In-App e Software","Regali e Donazioni","Cura Personale","Vari"],"Casa":["Spesa","Arredamento e Utensili","Luce","Gas","Acqua","Rifiuti","Manutenzione e Bricolage","Mutuo"],"Salute e benessere":["Parrucchiere","Farmacia","Dentista","Visite"],"Viaggi":["Trasporti","Alloggi","Uscite e cibo","Attività e spese extra"],"Altre Uscite":["Prelievi e Giroconti","Prestiti","Costo fisso c/c","Altro"],"Stipendio":["Stipendio"],"Altre entrate":["Versamenti","Varie"]},"metodiPagamento":["Conto corrente","PayPal","Satispay","Revolut","Bancomat/Contanti"],"abbonamenti":[{"avviso":false,"stato":"Attivo","servizio":"Iliad","costo":7.99,"mesi":1,"costoMensile":7.99,"rinnovo":"Automatico","metodoPagamento":"Conto corrente","scadenza":"2025-06-23","id":"a1","categoriaAbb":"Primari"},{"avviso":false,"stato":"Attivo","servizio":"WindTre","costo":14.99,"mesi":1,"costoMensile":14.99,"rinnovo":"Automatico","metodoPagamento":"Conto corrente","scadenza":"2025-07-01","id":"a2","categoriaAbb":"Primari"},{"avviso":true,"stato":"Attivo","servizio":"Amazon Prime","costo":49.9,"mesi":12,"costoMensile":4.158333333333333,"rinnovo":"Automatico","metodoPagamento":"Revolut","scadenza":"2025-12-01","id":"a3","categoriaAbb":"Intrattenimento"},{"avviso":true,"stato":"Attivo","servizio":"Spotify","costo":11.99,"mesi":1,"costoMensile":11.99,"rinnovo":"Automatico","metodoPagamento":"PayPal","scadenza":"2026-02-08","id":"a4","categoriaAbb":"Intrattenimento"},{"avviso":true,"stato":"Attivo","servizio":"Google One","costo":19.99,"mesi":12,"costoMensile":1.6658333333333333,"rinnovo":"Automatico","metodoPagamento":"Paypal","scadenza":"2027-01-19","id":"a5","categoriaAbb":"Produttività"},{"avviso":true,"stato":"Attivo","servizio":"Office 365","costo":99,"mesi":12,"costoMensile":8.25,"rinnovo":"Manuale","metodoPagamento":"Paypal","scadenza":"2026-11-05","id":"a6","categoriaAbb":"Produttività"},{"avviso":true,"stato":"Attivo","servizio":"Netflix","costo":6.99,"mesi":1,"costoMensile":6.99,"rinnovo":"Automatico","metodoPagamento":"PayPal","scadenza":"2025-06-19","id":"a7","categoriaAbb":"Intrattenimento"},{"avviso":false,"stato":"Non attivo","servizio":"Disney+","costo":null,"mesi":null,"costoMensile":null,"rinnovo":null,"metodoPagamento":null,"scadenza":null,"id":"a8","categoriaAbb":"Intrattenimento"},{"avviso":true,"stato":"Attivo","servizio":"Dazn","costo":180,"mesi":12,"costoMensile":15,"rinnovo":"Manuale","metodoPagamento":"Satispay","scadenza":"2025-08-25","id":"a9","categoriaAbb":"Intrattenimento"},{"avviso":true,"stato":"Attivo","servizio":"Palestra","costo":null,"mesi":null,"costoMensile":null,"rinnovo":null,"metodoPagamento":null,"scadenza":null,"id":"a10","categoriaAbb":"Salute & Benessere"},{"avviso":true,"stato":"Attivo","servizio":"Youtube Premium","costo":13.99,"mesi":1,"costoMensile":13.99,"rinnovo":"Automatico","metodoPagamento":"PayPal","scadenza":"2025-07-15","id":"a11","categoriaAbb":"Intrattenimento"},{"avviso":false,"stato":"Attivo","servizio":"Hbo Max","costo":5.99,"mesi":1,"costoMensile":5.99,"rinnovo":"Automatico","metodoPagamento":"PayPal","scadenza":"2026-01-19","id":"a12","categoriaAbb":"Intrattenimento"},{"avviso":false,"stato":"Non attivo","servizio":"Altro 3","costo":null,"mesi":null,"costoMensile":null,"rinnovo":null,"metodoPagamento":null,"scadenza":null,"id":"a13","categoriaAbb":"Altro"},{"avviso":false,"stato":"Non attivo","servizio":"Altro 4","costo":null,"mesi":null,"costoMensile":null,"rinnovo":null,"metodoPagamento":null,"scadenza":null,"id":"a14","categoriaAbb":"Altro"}],"avvisiScadenze":[{"servizio":"Assicurazione auto","scadenza":"2026-11-04","tempisticaAvviso":"10 giorni","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":null,"msgScadenza":"Assicurazione auto in scadenza.","msgScaduto":"Assicurazione auto scaduta."},{"servizio":"Bollo auto","scadenza":"2026-11-02","tempisticaAvviso":"Mese corrente","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":null,"msgScadenza":"Bollo auto in scadenza questo mese.","msgScaduto":"Bollo auto scaduto."},{"servizio":"Revisione auto","scadenza":"2026-11-30","tempisticaAvviso":"Mese corrente","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":null,"msgScadenza":"Revisione auto in scadenza questo mese.","msgScaduto":"Revisione auto scaduta."},{"servizio":"Iliad","scadenza":"2025-06-23","tempisticaAvviso":"-","statoAvviso":false,"mesiRinnovo":1,"tipoRinnovo":"Automatico","msgScadenza":null,"msgScaduto":null},{"servizio":"WindTre","scadenza":"2025-07-01","tempisticaAvviso":"-","statoAvviso":false,"mesiRinnovo":1,"tipoRinnovo":"Automatico","msgScadenza":null,"msgScaduto":null},{"servizio":"Amazon Prime","scadenza":"2025-12-01","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":"Automatico","msgScadenza":"Abbonamento ad Amazon Prime in scadenza.","msgScaduto":"Abbonamento ad Amazon Prime scaduto."},{"servizio":"Spotify","scadenza":"2026-02-08","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":1,"tipoRinnovo":"Automatico","msgScadenza":null,"msgScaduto":null},{"servizio":"Google One","scadenza":"2027-01-19","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":"Automatico","msgScadenza":"Abbonamento a Google One in scadenza.","msgScaduto":"Abbonamento a Google One scaduto."},{"servizio":"Office 365","scadenza":"2026-11-05","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":"Manuale","msgScadenza":"Abbonamento a Office 365 in scadenza.","msgScaduto":"Abbonamento a Office 365 scaduto."},{"servizio":"Netflix","scadenza":"2025-06-19","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":1,"tipoRinnovo":"Automatico","msgScadenza":"Abbonamento a Netflix in scadenza.","msgScaduto":"Abbonamento a Netflix scaduto."},{"servizio":"Disney+","scadenza":null,"tempisticaAvviso":"7 giorni","statoAvviso":false,"mesiRinnovo":0,"tipoRinnovo":0,"msgScadenza":"Abbonamento a Disney+ in scadenza.","msgScaduto":"Abbonamento a Disney+ scaduto."},{"servizio":"Dazn","scadenza":"2025-08-25","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":12,"tipoRinnovo":"Manuale","msgScadenza":"Abbonamento a Dazn in scadenza.","msgScaduto":"Abbonamento a Dazn scaduto."},{"servizio":"Piscina","scadenza":null,"tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":0,"tipoRinnovo":0,"msgScadenza":"Abbonamento in piscina in scadenza.","msgScaduto":"Abbonamento in piscina scaduto."},{"servizio":"Youtube Premium","scadenza":"2025-07-15","tempisticaAvviso":"7 giorni","statoAvviso":true,"mesiRinnovo":1,"tipoRinnovo":"Automatico","msgScadenza":"Abbonamento a Youtube Premium in scadenza.","msgScaduto":"Abbonamento a Youtube Premium scaduto."}],"auto":{"assicurazione":{"scadenza":"2026-11-04","importo":479,"compagnia":"Unipol Sai"},"bollo":{"scadenza":"2026-11-02","importo":262.08},"revisione":{"scadenza":"2026-11-30"},"tagliando":{"kmProssimo":"180.000 km"},"kmAnnuali":{"dataInizio":"2022-05-04","anni":{"2022":{"annuali":13524,"totali":75524},"2023":{"annuali":20006,"totali":95530},"2024":{"annuali":21670,"totali":117200},"2025":{"annuali":22800,"totali":140000}},"kmIniziali":61000},"gomme":[{"tipo":"4 stagioni","codice":"225/45 r17 94W","nome":"Pirelli Powergy Sf","dataAcquisto":"2025-04-25","kmAcquisto":null,"costo":356.63,"id":"gom1"}],"linkUtili":[{"categoria":"Assicurazione","link1":"Sito UnipolSai","link2":"Contratto UnipolSai"},{"categoria":"Bollo","link1":"Sito Sistema Piemonte","link2":"Ricevute bolli"},{"categoria":"Auto","link1":"Forum Peugeot","link2":"Manuale Peugeot 308"},{"categoria":"Ricambi","link1":"Lista Amazon","link2":null}],"manutenzione":[{"data":"2026-07-05","intervento":"Tagliando - Gomma nuova ant dx - Pastiglie freni - Risolto rumore","costo":333,"officina":"Coldani Paolo","id":"man1"},{"data":"2025-05-30","intervento":"Esclusione sistema AdBlue","costo":350,"officina":"Coldani Paolo","id":"man2"},{"data":"2025-05-14","intervento":"Montaggio 4 stagioni e smaltimento gomme","costo":60,"officina":"Coldani Paolo","id":"man3"},{"data":"2025-02-14","intervento":"Sostituzione radiatore bucato","costo":400,"officina":"Coldani Paolo","id":"man4"},{"data":"2024-11-18","intervento":"Revisione","costo":80,"officina":"Lu","id":"man5"},{"data":"2024-11-15","intervento":"Montaggio gomme invernali - Saldatura cerchio crepato (Montato post dx)","costo":80,"officina":"Coldani Paolo","id":"man6"},{"data":"2024-06-12","intervento":"Cambio ammortizzatori anteriori - Manutenzione cambio automatico","costo":585,"officina":"Coldani Paolo","id":"man7"},{"data":"2024-05-06","intervento":"Montaggio gomme estive","costo":40,"officina":"Coldani Paolo","id":"man8"},{"data":"2023-11-17","intervento":"Montaggio gomme invernali","costo":40,"officina":"Coldani Paolo","id":"man9"},{"data":"2023-10-09","intervento":"Sostituzione batteria","costo":170,"officina":"Coldani Paolo","id":"man10"},{"data":"2023-10-05","intervento":"Tagliando - Cambio pinze freni","costo":318,"officina":"Coldani Paolo","id":"man11"},{"data":"2023-05-25","intervento":"Montaggio gomme estive","costo":35,"officina":"Coldani Paolo","id":"man12"},{"data":"2022-11-17","intervento":"Montaggio gomme invernali","costo":30,"officina":"Coldani Paolo","id":"man13"},{"data":"2022-11-17","intervento":"Revisione","costo":100,"officina":"Coldani Paolo","id":"man14"},{"data":"2022-10-12","intervento":"Sostituzione paraurti anteriore e fanale destro","costo":1800,"officina":"Carrozzeria Italia","id":"man15"},{"data":"2022-09-12","intervento":"Tagliando","costo":155,"officina":"Coldani Paolo","id":"man16"}],"modello":"Peugeot 308 II 1.5 BlueHDi 130 CV"},"etichette":["Rimborsato"]};
 </script>
 <script>
 /* ==================== STATE & PERSISTENCE ==================== */
@@ -1773,17 +1773,45 @@ function ensureGasolioRef(){
   if(!DB.gasolioRef) DB.gasolioRef = { categoria:'Auto', dettaglio:'Gasolio e AdBlue' };
 }
 function ensurePrelieviRef(){
-  // Stesso meccanismo di gasolioRef, ma per la voce "Prelievi": serve a movimentiForTotals per
-  // escluderla dai totali (i prelievi sono uno spostamento di liquidità verso i contanti, non
-  // una spesa — la spesa vera viene registrata a parte quando i contanti vengono usati).
-  if(!DB.prelieviRef) DB.prelieviRef = { categoria:'Altre Uscite', dettaglio:'Prelievi' };
+  // Stesso meccanismo di gasolioRef, ma per la voce "Prelievi e Giroconti": serve a movimentiForTotals
+  // per escluderla dai totali (prelievi e giroconti sono uno spostamento di liquidità tra le proprie
+  // carte, non una spesa — la spesa vera viene registrata a parte, es. dal bot Telegram per il contante).
+  if(!DB.prelieviRef) DB.prelieviRef = { categoria:'Altre Uscite', dettaglio:'Prelievi e Giroconti' };
+}
+function ensureVersamentiRef(){
+  // Riferimento dinamico per i versamenti generici (es. da Revolut/Satispay) che rientrano sul conto
+  // corrente: se l'utente rinomina categoria/dettaglio da Impostazioni, questi valori si aggiornano
+  // di conseguenza (vedi wireCatExpandedCard) invece di restare agganciati a un nome fisso.
+  if(!DB.versamentiRef) DB.versamentiRef = { categoria:'Altre entrate', dettaglio:'Versamenti' };
+}
+// Migrazione una tantum (ma idempotente, sicura da rieseguire): la vecchia voce "Prelievi" diventa
+// "Prelievi e Giroconti", perché ora questa voce accoglie anche le uscite verso Revolut/Satispay/altre
+// carte proprie, non solo i prelievi contanti. Aggiorna sottocategorie, movimenti storici e il ref.
+function ensurePrelieviEGiroconti(){
+  ensurePrelieviRef();
+  const ref = DB.prelieviRef;
+  const cat = ref.categoria;
+  const oldDet = 'Prelievi';
+  const newDet = 'Prelievi e Giroconti';
+  if(ref.dettaglio === oldDet) ref.dettaglio = newDet;
+  const list = DB.sottocategorie && DB.sottocategorie[cat];
+  if(Array.isArray(list)){
+    const idx = list.indexOf(oldDet);
+    if(idx!==-1){
+      if(!list.includes(newDet)) list[idx] = newDet;
+      else list.splice(idx,1);
+    }
+  }
+  (DB.movimenti||[]).forEach(m=>{
+    if(String(m.categoria||'')===cat && String(m.descrizione||'')===oldDet) m.descrizione = newDet;
+  });
 }
 
 function loadDB(){
   const raw = localStorage.getItem(LS_KEY);
   if(raw){
     try{
-      DB = JSON.parse(raw); ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensureSchemaVersion();
+      DB = JSON.parse(raw); ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensurePrelieviEGiroconti(); ensureVersamentiRef(); ensureSchemaVersion();
       let needsSave = ensureNoRimborsoTag();
       if(ensureRimborsoDiIdsArray()) needsSave = true;
       if(needsSave) saveDB();
@@ -1803,6 +1831,8 @@ function loadDB(){
   ensureAutoLinkUtili();
   ensureGasolioRef();
   ensurePrelieviRef();
+  ensurePrelieviEGiroconti();
+  ensureVersamentiRef();
   ensureSchemaVersion();
   ensureNoRimborsoTag();
   ensureRimborsoDiIdsArray();
@@ -5927,7 +5957,6 @@ const BUILTIN_IMPORT_RULES = [
   { confidenza:'media', categoria:'Abbonamenti', dettaglio:'Youtube Premium', test:(c,imp,ent)=> !ent && /PAYPAL/.test(c) && Math.abs(imp)===13.99 },
 
   { confidenza:'alta', categoria:'Altre Uscite', dettaglio:'Costo fisso c/c', test:(c,imp,ent)=> !ent && /MY GENIUS|IMPOSTA BOLLO CONTO CORRENTE/.test(c) },
-  { confidenza:'alta', categoria:'Altre Uscite', dettaglio:'Prelievi', test:(c,imp,ent)=> !ent && /PRELIEVO MASTERCARD/.test(c) },
   { confidenza:'bassa', categoria:'Altre Uscite', dettaglio:'Altro', test:(c,imp,ent)=> !ent && /PAGOPA|UNICREDIT PAGAMENTI P\.A\.|NEXI-BOLLETTIN/.test(c) },
 
   { confidenza:'alta', categoria:'Acquisti', dettaglio:'Film/Giochi/App', test:(c,imp,ent)=> !ent && /GOOGLE[\s\S]*PLAY APP|GOOGLE[\s\S]*YOUTUBE/.test(c) },
@@ -6002,12 +6031,58 @@ function guessCategoryFromRules(causale, importo){
   if(ent) return { categoria:'Altre entrate', dettaglio:'Varie', nota:guessMerchantNote(causale), confidenza:'bassa' };
   return { categoria:'Acquisti', dettaglio:'Vari', nota:guessMerchantNote(causale), confidenza:'bassa' };
 }
+// Nota automatica per indicare verso/da quale carta è avvenuto uno spostamento di liquidità,
+// dedotta dalla causale bancaria grezza (usata sia per le uscite verso altre carte sia per i
+// versamenti in entrata che tornano sul conto corrente).
+function guessLiquiditaNota(causale, versoTxt){
+  const c = (causale||'').toUpperCase();
+  if(/REVOLUT/.test(c)) return `${versoTxt} Revolut`;
+  if(/SATISPAY/.test(c)) return `${versoTxt} Satispay`;
+  return null; // giroconto/ricarica/storno generico: nessuna carta specifica riconosciuta
+}
 function guessImportRow(causale, importo){
   if(isRefundEntrata(causale, importo)){
     return Object.assign({liquidita:false, _autoRimborso:true}, guessCategoryFromRules(causale, importo));
   }
-  if(/REVOLUT|SATISPAY|GIROCONTO|RICARICA|STORNO|UNIPOL\s?MOVE/i.test(causale||'')){
+  const c = causale || '';
+  const isUnipolMove = /UNIPOL\s?MOVE/i.test(c);
+  const isCardTransfer = /REVOLUT|SATISPAY|GIROCONTO|RICARICA|STORNO/i.test(c) || /PRELIEVO MASTERCARD/i.test(c);
+  const ent = importo > 0;
+
+  // Gli addebiti Unipol Move restano sempre nascosti come liquidità: il dettaglio del pedaggio viene
+  // già importato a parte dall'Excel Unipol Move dedicato, quindi qui servirebbe solo a duplicarlo.
+  if(isUnipolMove){
     return { categoria:null, dettaglio:null, nota:null, confidenza:'liquidita', liquidita:true };
+  }
+
+  if(isCardTransfer){
+    if(!ent){
+      // Uscita verso un'altra tua carta (o prelievo contante): il conto corrente resta il fulcro,
+      // quindi questo movimento viene sempre mostrato (non nascosto) sotto "Prelievi e Giroconti"
+      // ed escluso dai totali di spesa tramite prelieviRef/movimentiForTotals.
+      ensurePrelieviRef();
+      const ref = DB.prelieviRef;
+      return {
+        categoria: ref.categoria,
+        dettaglio: ref.dettaglio,
+        nota: guessLiquiditaNota(c, 'Ricarica'),
+        confidenza: 'alta',
+        liquidita: false,
+      };
+    }
+    // Entrata da un'altra tua carta (versamento di ritorno): potrebbe essere denaro nuovo (es. un
+    // incasso arrivato tramite Revolut) oppure solo un rimbalzo di denaro già tuo, e la causale
+    // bancaria non permette di distinguere i due casi in automatico. Va quindi sempre mostrata in
+    // revisione (confidenza bassa) invece di essere nascosta o inclusa in automatico nei totali.
+    ensureVersamentiRef();
+    const vref = DB.versamentiRef;
+    return {
+      categoria: vref.categoria,
+      dettaglio: vref.dettaglio,
+      nota: guessLiquiditaNota(c, 'Versamento da'),
+      confidenza: 'bassa',
+      liquidita: false,
+    };
   }
   return Object.assign({liquidita:false}, guessCategoryFromRules(causale, importo));
 }
@@ -6364,10 +6439,38 @@ function readFileAsText(file){
 function openImportFilesModal(){
   renderImportFilesModal();
 }
+// Testo consolidato con tutte le informazioni sull'import intelligente, mostrato dal pulsante
+// "Info" nel modale: evita di dover ricordare a memoria come si comporta ogni singola fonte.
+function importInfoHtml(){
+  return `
+    <p style="margin:0 0 10px;"><strong>Come funziona il riconoscimento automatico</strong><br>
+    Ogni movimento viene confrontato con delle regole (imparate dalle tue correzioni manuali passate,
+    più alcune predefinite). Ogni riga ottiene un livello di confidenza:</p>
+    <p style="margin:0 0 10px;">
+    • <strong>Alta</strong>: categoria/dettaglio proposti automaticamente, riga già pronta da importare.<br>
+    • <strong>Media/Bassa</strong>: proposta incerta o mancante, va controllata/completata a mano prima di importare.<br>
+    • <strong>Spostamento liquidità</strong>: il movimento viene riconosciuto come non rilevante ai fini della spesa e non viene importato affatto (es. ricariche Revolut, cambi valuta, addebiti Unipol Move già tracciati a parte).</p>
+    <p style="margin:0 0 10px;"><strong>Prelievi e Giroconti</strong><br>
+    Le uscite verso un'altra tua carta (prelievo contante, ricarica Revolut/Satispay, giroconto generico) vengono sempre importate in automatico sotto "Prelievi e Giroconti" ed escluse dai totali di spesa: il conto corrente resta il fulcro, quindi si conta solo l'uscita, mai anche l'entrata corrispondente sull'altra carta.</p>
+    <p style="margin:0 0 10px;"><strong>Versamenti</strong><br>
+    Le entrate che tornano dalle tue altre carte (es. un rimborso da Revolut) NON vengono più nascoste in automatico: potrebbero essere denaro nuovo (un incasso reale) oppure solo un rimbalzo di soldi già tuoi, e la causale bancaria da sola non basta a distinguerli. Compaiono quindi sempre in revisione, precompilate su "Altre entrate &gt; Versamenti": verifica tu, movimento per movimento, se lasciarle come incasso o se escluderle a mano.</p>
+    <p style="margin:0 0 10px;"><strong>CSV PayPal</strong><br>
+    Serve solo a riconoscere l'esercente reale nei movimenti PayPal generici dell'Excel UniCredit: non genera nuovi movimenti, l'importo resta sempre quello di UniCredit.</p>
+    <p style="margin:0 0 10px;"><strong>CSV Revolut</strong><br>
+    Importato in modo indipendente (non incrociato con UniCredit). Le ricariche (Top-up) e i cambi valuta interni vengono riconosciuti e nascosti come spostamenti di liquidità, per non contare due volte lo stesso denaro.</p>
+    <p style="margin:0;"><strong>Excel Unipol Move</strong><br>
+    Ogni pedaggio viene importato come uscita in Auto &gt; Pedaggi, con la nota compilata da stazione d'ingresso/uscita. Se importi insieme anche l'Excel UniCredit, gli addebiti Unipol Move vengono riconosciuti e nascosti automaticamente lì, per non contarli due volte.</p>`;
+}
 function renderImportFilesModal(){
   const html = `
-    <div class="modal-head"><h3>${ico('sparkle')} Importa movimenti</h3><button class="close-x" id="impFilesClose">${ico('x')}</button></div>
+    <div class="modal-head"><h3>${ico('sparkle')} Importa movimenti</h3>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button type="button" class="settings-info-btn settingsInfoToggle" data-target="importFilesInfo" title="Informazioni">${ico('info')}</button>
+        <button class="close-x" id="impFilesClose">${ico('x')}</button>
+      </div>
+    </div>
     <div class="modal-body">
+      <div class="page-sub settings-info-body" id="importFilesInfo" style="display:none; margin-bottom:14px; padding:10px; background:var(--surface-2); border-radius:8px;">${importInfoHtml()}</div>
       <div class="field">
         <label>Estratto conto UniCredit (Excel)</label>
         <input type="file" id="impFileUnicredit" accept=".xls,.xlsx">
@@ -6376,18 +6479,15 @@ function renderImportFilesModal(){
         <label>CSV PayPal (facoltativo, solo se importi anche l'Excel UniCredit)</label>
         <input type="file" id="impFilePaypal" accept=".csv">
       </div>
-      <div class="page-sub" style="margin-top:2px;">Il CSV PayPal serve solo a riconoscere l'esercente reale nei movimenti PayPal generici: non genera nuovi movimenti, l'importo resta sempre quello dell'Excel UniCredit.</div>
       <div class="field" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border-soft);">
         <label>CSV Revolut</label>
         <input type="file" id="impFileRevolut" accept=".csv">
       </div>
-      <div class="page-sub" style="margin-top:2px;">Le ricariche (Top-up) e i cambi valuta interni vengono riconosciuti automaticamente e nascosti come spostamenti di liquidità, per non contare due volte lo stesso denaro. I movimenti Revolut restano indipendenti: non vengono incrociati con l'estratto conto UniCredit.</div>
       <div class="field" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border-soft);">
         <label>Excel Unipol Move</label>
         <input type="file" id="impFileUnipolMove" accept=".xls,.xlsx">
       </div>
-      <div class="page-sub" style="margin-top:2px;">Ogni pedaggio viene importato come uscita in Auto &gt; Pedaggi, con la nota compilata automaticamente da stazione d'ingresso e d'uscita. I movimenti Unipol Move restano indipendenti: non vengono incrociati con l'estratto conto UniCredit — che però, se importato insieme, riconosce e nasconde in automatico gli addebiti Unipol Move come spostamento di liquidità, per non contarli due volte.</div>
-      <div class="page-sub" style="margin-top:10px;">Puoi caricare uno solo dei file, oppure più insieme: i movimenti riconosciuti finiranno tutti nella stessa schermata di revisione.</div>
+      <div class="page-sub" style="margin-top:10px;">Puoi caricare uno solo dei file, oppure più insieme: i movimenti riconosciuti finiranno tutti nella stessa schermata di revisione. Tocca "Info" qui sopra per i dettagli su come funziona il riconoscimento automatico.</div>
     </div>
     <div class="modal-foot">
       <button class="btn" id="impFilesCancel">Annulla</button>
@@ -6397,6 +6497,12 @@ function renderImportFilesModal(){
   document.getElementById('impFilesClose').onclick = closeModal;
   document.getElementById('impFilesCancel').onclick = closeModal;
   document.getElementById('impFilesContinue').onclick = startImport;
+  document.querySelectorAll('#modalBox .settingsInfoToggle').forEach(b=>{
+    b.onclick = ()=>{
+      const body = document.getElementById(b.dataset.target);
+      body.style.display = body.style.display==='none' ? 'block' : 'none';
+    };
+  });
 }
 async function startImport(){
   const ucFile = document.getElementById('impFileUnicredit').files[0];
@@ -6934,7 +7040,7 @@ async function supabasePushNow(){
     // adottiamo il remoto invece di sovrascriverlo e avvisiamo.
     if(remoteUpdated && (!priorLocalUpdated || remoteUpdated > priorLocalUpdated)){
       DB = existing.data;
-      ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensureSchemaVersion();
+      ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensurePrelieviEGiroconti(); ensureVersamentiRef(); ensureSchemaVersion();
       localStorage.setItem(LS_KEY, JSON.stringify(DB));
       invalidateMovIndex();
       renderCurrentView();
@@ -6979,7 +7085,7 @@ async function supabasePullAndMerge(){
       const localUpdated = DB._syncMeta && DB._syncMeta.updatedAt;
       if(remoteUpdated && (!localUpdated || remoteUpdated > localUpdated)){
         DB = remote;
-        ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensureSchemaVersion();
+        ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensurePrelieviEGiroconti(); ensureVersamentiRef(); ensureSchemaVersion();
         localStorage.setItem(LS_KEY, JSON.stringify(DB));
         invalidateMovIndex();
         showSyncFlash();
@@ -9262,6 +9368,7 @@ function wireCatExpandedCard(cardEl, cat){
           renameImportRulesDettaglio(cat, oldVal, newVal);
           if(DB.gasolioRef && DB.gasolioRef.categoria===cat && DB.gasolioRef.dettaglio===oldVal) DB.gasolioRef.dettaglio = newVal;
           if(DB.prelieviRef && DB.prelieviRef.categoria===cat && DB.prelieviRef.dettaglio===oldVal) DB.prelieviRef.dettaglio = newVal;
+          if(DB.versamentiRef && DB.versamentiRef.categoria===cat && DB.versamentiRef.dettaglio===oldVal) DB.versamentiRef.dettaglio = newVal;
           saveDB(); toast('Dettaglio aggiornato');
           renderDettagli();
         }
@@ -9334,6 +9441,7 @@ function wireCatExpandedCard(cardEl, cat){
     if(doCascade){ DB.movimenti.forEach(m=>{ if(m.categoria===cat) m.categoria = nuovoNome; }); }
     if(DB.gasolioRef && DB.gasolioRef.categoria===cat) DB.gasolioRef.categoria = nuovoNome;
     if(DB.prelieviRef && DB.prelieviRef.categoria===cat) DB.prelieviRef.categoria = nuovoNome;
+    if(DB.versamentiRef && DB.versamentiRef.categoria===cat) DB.versamentiRef.categoria = nuovoNome;
     saveDB(); toast('Categoria rinominata');
     catExpandedCat = nuovoNome;
     refreshCategorieModal();
