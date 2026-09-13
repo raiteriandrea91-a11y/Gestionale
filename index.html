@@ -8441,17 +8441,43 @@ function computeAutoSpesePerAnno(){
 }
 
 /* ==================== UTENZE ==================== */
+// Ripartisce l'importo di una bolletta sui mesi effettivamente coperti dal periodo di competenza
+// (in parti uguali, un mese = una quota), invece che tutto sul mese del pagamento. Senza periodo
+// di competenza indicato, il comportamento resta quello di sempre: tutto sul mese del pagamento.
+function splitImportoPerMese(m){
+  if(!m.periodoDal || !m.periodoAl) return { [m.data.slice(0,7)]: Number(m.uscite||0) };
+  const start = new Date(m.periodoDal+'T00:00:00');
+  const end = new Date(m.periodoAl+'T00:00:00');
+  if(isNaN(start) || isNaN(end) || end<start) return { [m.data.slice(0,7)]: Number(m.uscite||0) };
+  const months = [];
+  let cur = new Date(start.getFullYear(), start.getMonth(), 1);
+  const last = new Date(end.getFullYear(), end.getMonth(), 1);
+  while(cur<=last){
+    months.push(`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`);
+    cur.setMonth(cur.getMonth()+1);
+  }
+  if(!months.length) return { [m.data.slice(0,7)]: Number(m.uscite||0) };
+  const quota = Number(m.uscite||0)/months.length;
+  const res = {};
+  months.forEach(k=>{ res[k] = quota; });
+  return res;
+}
 function computeUtenzeStats(){
   const rows = movimentiForTotals(DB.movimenti).filter(m=>m.categoria==='Casa' && UTENZE_DETTAGLI.includes(m.descrizione) && m.uscite && m.data);
-  const byMonth = {}, byYear = {};
+  const byMonthPagamento = {}, byMonthCompetenza = {}, byYear = {};
   rows.forEach(m=>{
-    const mk = m.data.slice(0,7), yk = m.data.slice(0,4);
-    byMonth[mk] = byMonth[mk] || {};
-    byMonth[mk][m.descrizione] = (byMonth[mk][m.descrizione]||0) + Number(m.uscite);
+    const yk = m.data.slice(0,4);
+    byMonthPagamento[m.data.slice(0,7)] = byMonthPagamento[m.data.slice(0,7)] || {};
+    byMonthPagamento[m.data.slice(0,7)][m.descrizione] = (byMonthPagamento[m.data.slice(0,7)][m.descrizione]||0) + Number(m.uscite);
+    const quote = splitImportoPerMese(m);
+    Object.entries(quote).forEach(([mk,val])=>{
+      byMonthCompetenza[mk] = byMonthCompetenza[mk] || {};
+      byMonthCompetenza[mk][m.descrizione] = (byMonthCompetenza[mk][m.descrizione]||0) + val;
+    });
     byYear[yk] = byYear[yk] || {};
     byYear[yk][m.descrizione] = (byYear[yk][m.descrizione]||0) + Number(m.uscite);
   });
-  return { rows, byMonth, byYear };
+  return { rows, byMonthPagamento, byMonthCompetenza, byYear };
 }
 // Apre il form dedicato alle bollette (switch Luce/Gas/Acqua/Rifiuti + campi consumo/fornitore
 // solo dove ha senso), invece del form generico "Nuovo movimento" — ma il risultato è comunque
@@ -8482,6 +8508,13 @@ function openBollettaModal(id, onSaved){
       <div class="slim-row" id="ubConsumoRow">
         <span class="slim-icon">${ico('activity',14)}</span>
         <div class="slim-main field"><label>Consumo (<span id="ubConsumoUnita"></span>, opzionale)</label><input type="number" step="0.01" min="0" id="ubConsumo" value="${editing && editing.consumo!=null?editing.consumo:''}" placeholder="0"></div>
+      </div>
+      <div class="slim-row">
+        <span class="slim-icon">${ico('calendar',14)}</span>
+        <div class="slim-main" style="display:flex; gap:10px;">
+          <div class="field" style="flex:1;"><label>Periodo di competenza — dal (opzionale)</label><input type="date" id="ubPeriodoDal" value="${editing && editing.periodoDal ? editing.periodoDal : ''}"></div>
+          <div class="field" style="flex:1;"><label>al</label><input type="date" id="ubPeriodoAl" value="${editing && editing.periodoAl ? editing.periodoAl : ''}"></div>
+        </div>
       </div>
       <div class="slim-row" id="ubFornitoreRow">
         <span class="slim-icon">${ico('briefcase',14)}</span>
@@ -8549,6 +8582,8 @@ function openBollettaModal(id, onSaved){
     const consumo = consumoRaw!=='' && !isNaN(parseFloat(consumoRaw)) ? parseFloat(consumoRaw) : null;
     const fornitoreRaw = conFornitore ? document.getElementById('ubFornitore').value.trim() : '';
     const fornitore = fornitoreRaw || null;
+    const periodoDal = document.getElementById('ubPeriodoDal').value || null;
+    const periodoAl = document.getElementById('ubPeriodoAl').value || null;
 
     const mancanti = [];
     if(!data) mancanti.push('Data');
@@ -8562,12 +8597,14 @@ function openBollettaModal(id, onSaved){
       editing.metodoPagamento = metodoPagamento;
       editing.consumo = consumo;
       editing.fornitore = fornitore;
+      editing.periodoDal = periodoDal;
+      editing.periodoAl = periodoAl;
       if(fornitore) registraFornitoreSeNuovo(curTipo, fornitore, data);
       if(movExpandedYears) movExpandedYears.add(data.slice(0,4));
       saveDB(); closeModal(); toastSuccess('Bolletta salvata'); (onSaved || renderCurrentView)();
       return;
     }
-    const newMov = { id:uid('m'), data, categoria:'Casa', descrizione:curTipo, entrate:null, uscite:importo, note: note||null, etichette:[], metodoPagamento, consumo, fornitore };
+    const newMov = { id:uid('m'), data, categoria:'Casa', descrizione:curTipo, entrate:null, uscite:importo, note: note||null, etichette:[], metodoPagamento, consumo, fornitore, periodoDal, periodoAl };
     DB.movimenti.push(newMov);
     if(fornitore) registraFornitoreSeNuovo(curTipo, fornitore, data);
     if(movExpandedYears) movExpandedYears.add(data.slice(0,4));
@@ -8575,6 +8612,8 @@ function openBollettaModal(id, onSaved){
     // Resta aperto per registrare più bollette di fila, come nel form movimento standard.
     document.getElementById('ubImporto').value = '';
     document.getElementById('ubConsumo').value = '';
+    document.getElementById('ubPeriodoDal').value = '';
+    document.getElementById('ubPeriodoAl').value = '';
     document.getElementById('ubNote').value = '';
     document.getElementById('ubImporto').focus();
   };
@@ -8593,6 +8632,7 @@ async function cambiaFornitoreUtenza(tipo){
   saveDB(); toastSuccess('Fornitore aggiornato'); renderUtenze();
 }
 let utenzeStoricoOpen = {}; // { Luce:false, Gas:false, Acqua:false } — storico fornitori collassato di default
+let utenzeChartMode = 'competenza'; // 'competenza' | 'pagamento' — vista del grafico andamento mensile
 function renderUtenze(){
   const el = document.getElementById('view-utenze');
   if(!el) return;
@@ -8605,7 +8645,8 @@ function renderUtenze(){
   let vocePrincipale = null, voceMax = 0;
   UTENZE_DETTAGLI.forEach(t=>{ if((annoCorrente[t]||0) > voceMax){ voceMax = annoCorrente[t]; vocePrincipale = t; } });
 
-  const monthKeys = Object.keys(stats.byMonth).sort().slice(-12);
+  const monthKeys = Object.keys(Object.assign({}, stats.byMonthPagamento, stats.byMonthCompetenza)).sort().slice(-12);
+  const byMonthAttivo = utenzeChartMode==='competenza' ? stats.byMonthCompetenza : stats.byMonthPagamento;
   const years = Object.keys(stats.byYear).sort().slice(-5);
 
   const isDark = currentTheme()!=='light';
@@ -8648,7 +8689,13 @@ function renderUtenze(){
     </div>
 
     <div class="card" style="margin-bottom:22px;">
-      <div class="card-title">${ico('activity')} Andamento mensile per utenza</div>
+      <div class="topbar" style="margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">${ico('activity')} Andamento mensile per utenza</div>
+        <div class="view-toggle" id="utenzeChartToggle">
+          <button data-mode="competenza" class="${utenzeChartMode==='competenza'?'active':''}" title="Ripartisce ogni bolletta sui mesi del periodo di competenza indicato">Per competenza</button>
+          <button data-mode="pagamento" class="${utenzeChartMode==='pagamento'?'active':''}" title="Mette l'intero importo nel mese in cui hai pagato">Per pagamento</button>
+        </div>
+      </div>
       <div class="chart-wrap-sm"><canvas id="chartUtenzeMese"></canvas></div>
     </div>
 
@@ -8662,12 +8709,16 @@ function renderUtenze(){
 
   document.getElementById('btnNuovaBolletta').onclick = openNuovaBollettaModal;
   document.getElementById('btnUtenzaPromemoria').onclick = openUtenzaPromemoriaModal;
+  document.querySelectorAll('#utenzeChartToggle button').forEach(b=>b.onclick = ()=>{
+    utenzeChartMode = b.dataset.mode;
+    renderUtenze();
+  });
 
   animateNumber(document.getElementById('kpiUtenzeAnno'), null, totaleAnno, fmtEUR);
 
   const dsMese = UTENZE_DETTAGLI.map(t=>({
     label: t,
-    data: monthKeys.map(k=>(stats.byMonth[k]||{})[t]||0),
+    data: monthKeys.map(k=>(byMonthAttivo[k]||{})[t]||0),
     borderColor: getComputedStyle(document.documentElement).getPropertyValue('--'+UTENZE_COLORI_VAR[t]).trim() || '#999',
     backgroundColor: 'transparent',
     tension: .3,
@@ -8722,8 +8773,9 @@ function renderUtenzeSezioni(stats, UTENZE_ICONE){
         <thead><tr><th>Data</th><th class="num">Importo</th>${conFornitore?'<th class="num">Consumo</th><th class="num">€/unità</th><th>Fornitore</th>':''}<th></th></tr></thead>
         <tbody>${rows.map(m=>{
           const costoUnita = (m.consumo && m.consumo>0) ? (m.uscite/m.consumo) : null;
+          const periodoTxt = (m.periodoDal && m.periodoAl) ? `<div style="font-size:10.5px; color:var(--text-faint); white-space:nowrap;">${fmtDate(m.periodoDal)} – ${fmtDate(m.periodoAl)}</div>` : '';
           return `<tr data-id="${m.id}">
-            <td>${fmtDate(m.data)}</td>
+            <td>${fmtDate(m.data)}${periodoTxt}</td>
             <td class="num amt neg">${fmtEUR(m.uscite)}</td>
             ${conFornitore?`<td class="num">${m.consumo!=null?m.consumo.toLocaleString('it-IT')+' '+(UTENZE_UNITA[t]||''):'—'}</td><td class="num">${costoUnita!=null?costoUnita.toLocaleString('it-IT',{minimumFractionDigits:3,maximumFractionDigits:3})+' €':'—'}</td><td>${esc(m.fornitore||'—')}</td>`:''}
             <td><button class="btn btn-icon btn-sm editUtenzaMov" data-id="${m.id}">${ico('edit')}</button></td>
