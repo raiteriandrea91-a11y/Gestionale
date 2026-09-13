@@ -1784,6 +1784,36 @@ function ensureVersamentiRef(){
   // di conseguenza (vedi wireCatExpandedCard) invece di restare agganciati a un nome fisso.
   if(!DB.versamentiRef) DB.versamentiRef = { categoria:'Altre entrate', dettaglio:'Versamenti' };
 }
+/* Utenze: quali dettagli di "Casa" sono trattati come bollette nella scheda Utenze, quali di questi
+   hanno anche consumo (kWh/m³) e fornitore tracciabile, e le unità di misura per ciascuno. */
+const UTENZE_DETTAGLI = ['Luce','Gas','Acqua','Rifiuti'];
+const UTENZE_CON_DETTAGLI = ['Luce','Gas','Acqua'];
+const UTENZE_UNITA = { Luce:'kWh', Gas:'m³', Acqua:'m³' };
+const UTENZE_COLORI = { Luce:'var(--amber)', Gas:'var(--coral)', Acqua:'var(--blue)', Rifiuti:'var(--violet)' };
+const UTENZE_COLORI_VAR = { Luce:'amber', Gas:'coral', Acqua:'blue', Rifiuti:'violet' };
+function ensureUtenzeFornitori(){
+  if(!DB.utenzeFornitori) DB.utenzeFornitori = {};
+  UTENZE_CON_DETTAGLI.forEach(t=>{ if(!Array.isArray(DB.utenzeFornitori[t])) DB.utenzeFornitori[t] = []; });
+}
+// Fornitore correntemente attivo per un'utenza (l'ultimo della cronologia, ordinata per data "dal").
+function fornitoreAttuale(tipo){
+  ensureUtenzeFornitori();
+  const arr = DB.utenzeFornitori[tipo]||[];
+  return arr.length ? arr[arr.length-1].nome : null;
+}
+// Registra un cambio fornitore solo se il nome è effettivamente diverso dall'attuale: viene chiamata
+// sia quando l'utente aggiorna manualmente il fornitore dalla scheda Utenze, sia automaticamente ogni
+// volta che registra una bolletta con un nome di fornitore diverso da quello già in cronologia.
+function registraFornitoreSeNuovo(tipo, nome, data){
+  if(!nome || !UTENZE_CON_DETTAGLI.includes(tipo)) return;
+  ensureUtenzeFornitori();
+  const arr = DB.utenzeFornitori[tipo];
+  const attuale = arr.length ? arr[arr.length-1] : null;
+  if(!attuale || attuale.nome !== nome){
+    arr.push({ nome, dal: data || new Date().toISOString().slice(0,10) });
+    arr.sort((a,b)=>(a.dal||'').localeCompare(b.dal||''));
+  }
+}
 // Migrazione una tantum (ma idempotente, sicura da rieseguire): la vecchia voce "Prelievi" diventa
 // "Prelievi e Giroconti", perché ora questa voce accoglie anche le uscite verso Revolut/Satispay/altre
 // carte proprie, non solo i prelievi contanti. Aggiorna sottocategorie, movimenti storici e il ref.
@@ -1811,7 +1841,7 @@ function loadDB(){
   const raw = localStorage.getItem(LS_KEY);
   if(raw){
     try{
-      DB = JSON.parse(raw); ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensurePrelieviEGiroconti(); ensureVersamentiRef(); ensureSchemaVersion();
+      DB = JSON.parse(raw); ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensurePrelieviEGiroconti(); ensureVersamentiRef(); ensureUtenzeFornitori(); ensureSchemaVersion();
       let needsSave = ensureNoRimborsoTag();
       if(ensureRimborsoDiIdsArray()) needsSave = true;
       if(needsSave) saveDB();
@@ -1833,6 +1863,7 @@ function loadDB(){
   ensurePrelieviRef();
   ensurePrelieviEGiroconti();
   ensureVersamentiRef();
+  ensureUtenzeFornitori();
   ensureSchemaVersion();
   ensureNoRimborsoTag();
   ensureRimborsoDiIdsArray();
@@ -2511,10 +2542,10 @@ let currentView = 'dashboard';
    NAV_ORDER, il resto finisce nel menu "espandi" — l'ordine (e quindi cosa sta in pillola
    e cosa nel menu) è personalizzabile da Impostazioni > Ordine navigazione (solo mobile). ---- */
 const NAV_ICON_HTML = {
-  dashboard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>',
-  movimenti:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
+  dashboard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>',
+  movimenti:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>',
   ricerca:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
-  abbonamenti:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>',
+  abbonamenti:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>',
   auto:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L18.5 11"></path><rect x="2.5" y="11" width="19" height="6" rx="2"></rect><circle cx="7.5" cy="17.5" r="1.5"></circle><circle cx="16.5" cy="17.5" r="1.5"></circle></svg>',
   mutuo: ico('home',18),
   utenze: ico('zap',18),
@@ -2566,7 +2597,6 @@ function renderComingSoonView(el, title, sub, icon){
   `;
 }
 function renderMutuo(){ renderComingSoonView(document.getElementById('view-mutuo'), 'Mutuo', 'Il tuo futuro mutuo, tutto in un colpo d\'occhio', 'home'); }
-function renderUtenze(){ renderComingSoonView(document.getElementById('view-utenze'), 'Utenze', 'Andamento di luce, gas, acqua e altre bollette', 'zap'); }
 
 const renderers = {
   dashboard: renderDashboard,
@@ -4771,6 +4801,20 @@ function openMovModal(id, onSaved, duplicateFrom){
       </div>
       <div class="slim-row"><span class="slim-icon">${ico('folder',14)}</span><div class="slim-main field"><label>Categoria</label><select id="mCategoria"></select></div></div>
       <div class="slim-row"><span class="slim-icon">${ico('tag',14)}</span><div class="slim-main field"><label id="mDescLabel">Dettaglio${tipo==='uscita'?'':' (opzionale)'}</label><select id="mDescrizione"></select></div></div>
+      <div class="slim-row" id="mUtenzaRow" style="display:none;">
+        <span class="slim-icon">${ico('zap',14)}</span>
+        <div class="slim-main" style="display:flex; gap:10px;">
+          <div class="field" style="flex:1;">
+            <label>Consumo (<span id="mConsumoUnita"></span>, opzionale)</label>
+            <input type="number" step="0.01" min="0" id="mConsumo" value="${prefill && prefill.consumo!=null ? prefill.consumo : ''}" placeholder="0">
+          </div>
+          <div class="field" style="flex:1;">
+            <label>Fornitore (opzionale)</label>
+            <input type="text" id="mFornitore" list="mFornitoreList" value="${prefill && prefill.fornitore ? esc(prefill.fornitore) : ''}" placeholder="Nome fornitore">
+            <datalist id="mFornitoreList"></datalist>
+          </div>
+        </div>
+      </div>
       <div class="slim-row slim-amount">
         <span class="slim-icon">${ico('wallet',14)}</span>
         <div class="slim-main field"><label>Importo (€)</label><input type="number" step="0.01" inputmode="decimal" min="0" id="mImporto" value="${prefill?(prefill.entrate||prefill.uscite||''):''}" placeholder="0.00">
@@ -4890,12 +4934,32 @@ function openMovModal(id, onSaved, duplicateFrom){
     refreshRimborsoRowsVisibility();
     refreshCatOptions();
   };
-  document.getElementById('mCategoria').onchange = refreshDescOptions;
+  // Mostra i campi Consumo/Fornitore solo per le bollette Luce/Gas/Acqua (categoria Casa): sono gli
+  // unici dettagli per cui questi dati hanno senso ed è possibile tracciare uno storico fornitori.
+  function refreshUtenzaRow(){
+    const row = document.getElementById('mUtenzaRow');
+    if(!row) return;
+    const cat = document.getElementById('mCategoria').value;
+    const det = document.getElementById('mDescrizione').value;
+    if(cat==='Casa' && UTENZE_CON_DETTAGLI.includes(det)){
+      row.style.display = '';
+      document.getElementById('mConsumoUnita').textContent = UTENZE_UNITA[det] || '';
+      const fornInput = document.getElementById('mFornitore');
+      const dl = document.getElementById('mFornitoreList');
+      if(dl) dl.innerHTML = (DB.utenzeFornitori[det]||[]).map(f=>`<option value="${esc(f.nome)}">`).join('');
+      if(!fornInput.value) fornInput.value = fornitoreAttuale(det) || '';
+    } else {
+      row.style.display = 'none';
+    }
+  }
+  document.getElementById('mCategoria').onchange = ()=>{ refreshDescOptions(); refreshUtenzaRow(); };
+  document.getElementById('mDescrizione').addEventListener('change', refreshUtenzaRow);
   document.getElementById('mImporto').addEventListener('input', refreshRimborsoMismatch);
   curIsRimborso && (document.getElementById('mIsRimborso').checked = true);
   refreshRimborsoRowsVisibility();
   renderRimborsoDiRows();
   refreshCatOptions();
+  refreshUtenzaRow();
   // "Conto corrente" è sempre la prima opzione e quella selezionata di default (nessuna icona associata).
   const metodoSel = document.getElementById('mMetodoPagamento');
   const metodoOptions = ['Conto corrente', ...DB.metodiPagamento.filter(m=>m!=='Conto corrente')];
@@ -4930,6 +4994,11 @@ function openMovModal(id, onSaved, duplicateFrom){
     const categoria = document.getElementById('mCategoria').value;
     const metodoPagamento = document.getElementById('mMetodoPagamento').value || 'Conto corrente';
     const note = document.getElementById('mNote').value.trim();
+    const isUtenza = categoria==='Casa' && UTENZE_CON_DETTAGLI.includes(descSel);
+    const consumoRaw = isUtenza && document.getElementById('mConsumo') ? document.getElementById('mConsumo').value : '';
+    const consumo = consumoRaw!=='' && !isNaN(parseFloat(consumoRaw)) ? parseFloat(consumoRaw) : null;
+    const fornitoreRaw = isUtenza && document.getElementById('mFornitore') ? document.getElementById('mFornitore').value.trim() : '';
+    const fornitore = fornitoreRaw || null;
 
     // Validazione: obbligatori Data, Importo, Categoria, Metodo di pagamento e Dettaglio (solo per le Uscite).
     // Le uniche voci facoltative sono Note ed Etichette.
@@ -4952,10 +5021,13 @@ function openMovModal(id, onSaved, duplicateFrom){
       editing.note = note || null;
       editing.etichette = mEtichette;
       editing.metodoPagamento = metodoPagamento;
+      editing.consumo = consumo;
+      editing.fornitore = fornitore;
       editing.rimborsoSpesa = rimborsoSpesa || undefined;
       editing.rimborsoDiIds = rimborsoDiIds.length ? rimborsoDiIds : undefined;
       oldRimborsoDiIds.filter(id=>!rimborsoDiIds.includes(id)).forEach(removeRimborsatoTagIfUnused);
       rimborsoDiIds.forEach(applyRimborsatoTag);
+      if(fornitore) registraFornitoreSeNuovo(descSel, fornitore, data);
       if(movExpandedYears) movExpandedYears.add(data.slice(0,4));
       saveDB(); closeModal(); toastSuccess('Movimento salvato'); (onSaved || renderCurrentView)();
       return;
@@ -4964,13 +5036,15 @@ function openMovModal(id, onSaved, duplicateFrom){
     // consecutivi. Restano invariati Data, Categoria, Dettaglio, Metodo di pagamento; si azzerano solo
     // Importo, Note, Etichette e il collegamento al rimborso (per non collegare per sbaglio due
     // rimborsi diversi alla stessa spesa).
-    const newMov = { id:uid('m'), data, categoria, descrizione:descSel||null, entrate: curTipo==='entrata'?importo:null, uscite: curTipo==='uscita'?importo:null, note: note||null, etichette: mEtichette, metodoPagamento, rimborsoSpesa: rimborsoSpesa||undefined, rimborsoDiIds: rimborsoDiIds.length ? rimborsoDiIds : undefined };
+    const newMov = { id:uid('m'), data, categoria, descrizione:descSel||null, entrate: curTipo==='entrata'?importo:null, uscite: curTipo==='uscita'?importo:null, note: note||null, etichette: mEtichette, metodoPagamento, consumo, fornitore, rimborsoSpesa: rimborsoSpesa||undefined, rimborsoDiIds: rimborsoDiIds.length ? rimborsoDiIds : undefined };
     DB.movimenti.push(newMov);
     rimborsoDiIds.forEach(applyRimborsatoTag);
+    if(fornitore) registraFornitoreSeNuovo(descSel, fornitore, data);
     if(movExpandedYears) movExpandedYears.add(data.slice(0,4));
     saveDB(); toastSuccess('Movimento salvato'); (onSaved || renderCurrentView)();
     document.getElementById('mImporto')._importoKeypadReset ? document.getElementById('mImporto')._importoKeypadReset() : (document.getElementById('mImporto').value = '');
     document.getElementById('mNote').value = '';
+    if(document.getElementById('mConsumo')) document.getElementById('mConsumo').value = '';
     mEtichette = [];
     document.getElementById('mEtichetteChips').innerHTML = '';
     rimborsoDiRows = [''];
@@ -7040,7 +7114,7 @@ async function supabasePushNow(){
     // adottiamo il remoto invece di sovrascriverlo e avvisiamo.
     if(remoteUpdated && (!priorLocalUpdated || remoteUpdated > priorLocalUpdated)){
       DB = existing.data;
-      ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensurePrelieviEGiroconti(); ensureVersamentiRef(); ensureSchemaVersion();
+      ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensurePrelieviEGiroconti(); ensureVersamentiRef(); ensureUtenzeFornitori(); ensureSchemaVersion();
       localStorage.setItem(LS_KEY, JSON.stringify(DB));
       invalidateMovIndex();
       renderCurrentView();
@@ -7085,7 +7159,7 @@ async function supabasePullAndMerge(){
       const localUpdated = DB._syncMeta && DB._syncMeta.updatedAt;
       if(remoteUpdated && (!localUpdated || remoteUpdated > localUpdated)){
         DB = remote;
-        ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensurePrelieviEGiroconti(); ensureVersamentiRef(); ensureSchemaVersion();
+        ensureMetodiPagamento(); ensureEtichette(); ensureCategorieColori(); ensureCategorieIcone(); ensureCategorieAbbonamenti(); ensureLinkUtiliGenerici(); ensureWelfare(); ensurePianificati(); ensureAutoLinkUtili(); ensureGasolioRef(); ensurePrelieviRef(); ensurePrelieviEGiroconti(); ensureVersamentiRef(); ensureUtenzeFornitori(); ensureSchemaVersion();
         localStorage.setItem(LS_KEY, JSON.stringify(DB));
         invalidateMovIndex();
         showSyncFlash();
@@ -8364,6 +8438,308 @@ function computeAutoSpesePerAnno(){
   });
   const years = Object.keys(byYear).sort();
   return { years, values: years.map(y=>byYear[y]) };
+}
+
+/* ==================== UTENZE ==================== */
+function computeUtenzeStats(){
+  const rows = movimentiForTotals(DB.movimenti).filter(m=>m.categoria==='Casa' && UTENZE_DETTAGLI.includes(m.descrizione) && m.uscite && m.data);
+  const byMonth = {}, byYear = {};
+  rows.forEach(m=>{
+    const mk = m.data.slice(0,7), yk = m.data.slice(0,4);
+    byMonth[mk] = byMonth[mk] || {};
+    byMonth[mk][m.descrizione] = (byMonth[mk][m.descrizione]||0) + Number(m.uscite);
+    byYear[yk] = byYear[yk] || {};
+    byYear[yk][m.descrizione] = (byYear[yk][m.descrizione]||0) + Number(m.uscite);
+  });
+  return { rows, byMonth, byYear };
+}
+// Apre il form dedicato alle bollette (switch Luce/Gas/Acqua/Rifiuti + campi consumo/fornitore
+// solo dove ha senso), invece del form generico "Nuovo movimento" — ma il risultato è comunque
+// un vero movimento in DB.movimenti (categoria Casa), quindi entra regolarmente in Dashboard,
+// Ricerca/Confronto e nella scheda Movimenti come qualsiasi altra spesa.
+function openNuovaBollettaModal(){
+  openBollettaModal(null, renderUtenze);
+}
+function openBollettaModal(id, onSaved){
+  const editing = id ? DB.movimenti.find(m=>m.id===id) : null;
+  const tipo0 = (editing && UTENZE_DETTAGLI.includes(editing.descrizione)) ? editing.descrizione : 'Luce';
+  const html = `
+    <div class="modal-head"><h3>${ico('zap')} ${editing?'Modifica bolletta':'Nuova bolletta'}</h3><button class="close-x" id="ubClose">${ico('x')}</button></div>
+    <div class="modal-body slim-form">
+      <div class="slim-switch" id="ubTipoSwitch" style="flex-wrap:wrap; gap:6px;">
+        ${UTENZE_DETTAGLI.map(t=>`<span class="slim-switch-opt ${t===tipo0?'active':''}" data-tipo="${esc(t)}" style="flex:1 1 auto; text-align:center;">${esc(t)}</span>`).join('')}
+      </div>
+      <div class="slim-row"><span class="slim-icon">${ico('calendar',14)}</span><div class="slim-main field"><label>Data</label><input type="date" id="ubData" value="${editing?editing.data:new Date().toISOString().slice(0,10)}"></div>
+        <div class="date-quick-chips">
+          <button type="button" class="date-quick-chip" id="ubDataOggi">Oggi</button>
+          <button type="button" class="date-quick-chip" id="ubDataIeri">Ieri</button>
+        </div>
+      </div>
+      <div class="slim-row slim-amount">
+        <span class="slim-icon">${ico('wallet',14)}</span>
+        <div class="slim-main field"><label>Importo (€)</label><input type="number" step="0.01" inputmode="decimal" min="0" id="ubImporto" value="${editing?(editing.uscite||''):''}" placeholder="0.00"></div>
+      </div>
+      <div class="slim-row" id="ubConsumoRow">
+        <span class="slim-icon">${ico('activity',14)}</span>
+        <div class="slim-main field"><label>Consumo (<span id="ubConsumoUnita"></span>, opzionale)</label><input type="number" step="0.01" min="0" id="ubConsumo" value="${editing && editing.consumo!=null?editing.consumo:''}" placeholder="0"></div>
+      </div>
+      <div class="slim-row" id="ubFornitoreRow">
+        <span class="slim-icon">${ico('briefcase',14)}</span>
+        <div class="slim-main field"><label>Fornitore (opzionale)</label><input type="text" id="ubFornitore" list="ubFornitoreList" value="${editing && editing.fornitore?esc(editing.fornitore):''}" placeholder="Nome fornitore"><datalist id="ubFornitoreList"></datalist></div>
+      </div>
+      <div class="slim-row"><span class="slim-icon">${ico('creditCard',14)}</span><div class="slim-main field"><label>Metodo di pagamento</label><select id="ubMetodoPagamento"></select></div></div>
+      <div class="slim-row"><span class="slim-icon">${ico('fileText',14)}</span><div class="slim-main field"><label>Note (opzionale)</label><input type="text" id="ubNote" value="${editing?esc(editing.note||''):''}" placeholder="Aggiungi una nota"></div></div>
+    </div>
+    <div class="modal-foot">
+      ${editing?'<button class="btn btn-danger" id="ubDelete">Elimina</button>':''}
+      <button class="btn" id="ubCancel">${editing?'Annulla':'Chiudi'}</button>
+      <button class="btn btn-primary" id="ubSave">Salva</button>
+    </div>
+  `;
+  const box = document.getElementById('modalBox');
+  box.className = 'modal modal-form';
+  box.innerHTML = html;
+  showModalBackdrop();
+
+  let curTipo = tipo0;
+  function refreshTipoFields(){
+    document.getElementById('ubConsumoUnita').textContent = UTENZE_UNITA[curTipo] || '';
+    const conFornitore = UTENZE_CON_DETTAGLI.includes(curTipo);
+    document.getElementById('ubConsumoRow').style.display = conFornitore ? '' : 'none';
+    document.getElementById('ubFornitoreRow').style.display = conFornitore ? '' : 'none';
+    if(conFornitore){
+      const dl = document.getElementById('ubFornitoreList');
+      dl.innerHTML = (DB.utenzeFornitori[curTipo]||[]).map(f=>`<option value="${esc(f.nome)}">`).join('');
+      const fornInput = document.getElementById('ubFornitore');
+      if(!fornInput.value) fornInput.value = fornitoreAttuale(curTipo) || '';
+    }
+  }
+  document.querySelectorAll('#ubTipoSwitch .slim-switch-opt').forEach(opt=>opt.onclick = ()=>{
+    curTipo = opt.dataset.tipo;
+    document.querySelectorAll('#ubTipoSwitch .slim-switch-opt').forEach(x=>x.classList.remove('active'));
+    opt.classList.add('active');
+    document.getElementById('ubFornitore').value = '';
+    refreshTipoFields();
+  });
+  refreshTipoFields();
+
+  const metodoSel = document.getElementById('ubMetodoPagamento');
+  const metodoOptions = ['Conto corrente', ...DB.metodiPagamento.filter(m=>m!=='Conto corrente')];
+  metodoSel.innerHTML = metodoOptions.map(m=>`<option value="${esc(m)}" ${m===((editing&&editing.metodoPagamento)||'Conto corrente')?'selected':''}>${esc(m)}</option>`).join('');
+
+  document.getElementById('ubClose').onclick = closeModal;
+  document.getElementById('ubCancel').onclick = closeModal;
+  const pad2 = n=>String(n).padStart(2,'0');
+  const toISODate = d=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  document.getElementById('ubDataOggi').onclick = ()=>{ document.getElementById('ubData').value = toISODate(new Date()); };
+  document.getElementById('ubDataIeri').onclick = ()=>{ const d = new Date(); d.setDate(d.getDate()-1); document.getElementById('ubData').value = toISODate(d); };
+
+  if(editing) document.getElementById('ubDelete').onclick = ()=>{
+    closeModal();
+    removeByIdWithUndo(DB.movimenti, editing.id, 'Bolletta eliminata', onSaved || renderCurrentView);
+  };
+
+  document.getElementById('ubSave').onclick = ()=>{
+    const data = document.getElementById('ubData').value;
+    const importo = parseFloat(document.getElementById('ubImporto').value);
+    const metodoPagamento = document.getElementById('ubMetodoPagamento').value || 'Conto corrente';
+    const note = document.getElementById('ubNote').value.trim();
+    const conFornitore = UTENZE_CON_DETTAGLI.includes(curTipo);
+    const consumoRaw = conFornitore ? document.getElementById('ubConsumo').value : '';
+    const consumo = consumoRaw!=='' && !isNaN(parseFloat(consumoRaw)) ? parseFloat(consumoRaw) : null;
+    const fornitoreRaw = conFornitore ? document.getElementById('ubFornitore').value.trim() : '';
+    const fornitore = fornitoreRaw || null;
+
+    const mancanti = [];
+    if(!data) mancanti.push('Data');
+    if(isNaN(importo) || importo<=0) mancanti.push('Importo');
+    if(mancanti.length){ toast(`Attenzione: compila ${mancanti.join(', ')}`); return; }
+
+    if(editing){
+      editing.data = data; editing.categoria = 'Casa'; editing.descrizione = curTipo;
+      editing.entrate = null; editing.uscite = importo;
+      editing.note = note || null;
+      editing.metodoPagamento = metodoPagamento;
+      editing.consumo = consumo;
+      editing.fornitore = fornitore;
+      if(fornitore) registraFornitoreSeNuovo(curTipo, fornitore, data);
+      if(movExpandedYears) movExpandedYears.add(data.slice(0,4));
+      saveDB(); closeModal(); toastSuccess('Bolletta salvata'); (onSaved || renderCurrentView)();
+      return;
+    }
+    const newMov = { id:uid('m'), data, categoria:'Casa', descrizione:curTipo, entrate:null, uscite:importo, note: note||null, etichette:[], metodoPagamento, consumo, fornitore };
+    DB.movimenti.push(newMov);
+    if(fornitore) registraFornitoreSeNuovo(curTipo, fornitore, data);
+    if(movExpandedYears) movExpandedYears.add(data.slice(0,4));
+    saveDB(); toastSuccess('Bolletta salvata'); (onSaved || renderCurrentView)();
+    // Resta aperto per registrare più bollette di fila, come nel form movimento standard.
+    document.getElementById('ubImporto').value = '';
+    document.getElementById('ubConsumo').value = '';
+    document.getElementById('ubNote').value = '';
+    document.getElementById('ubImporto').focus();
+  };
+}
+// Apre il form "Nuova voce pianificata" precompilato su categoria Casa, per un promemoria di
+// prossima bolletta attesa — riusa lo stesso meccanismo di Movimenti Pianificati, senza duplicati.
+function openUtenzaPromemoriaModal(){
+  openPianificatoFormModal(null, renderUtenze);
+  const catSel = document.getElementById('pfCategoria');
+  if(catSel){ catSel.value = 'Casa'; catSel.dispatchEvent(new Event('change')); }
+}
+async function cambiaFornitoreUtenza(tipo){
+  const nome = ((await customPrompt(`Nuovo fornitore per ${tipo}:`, fornitoreAttuale(tipo)||'')) || '').trim();
+  if(!nome) return;
+  registraFornitoreSeNuovo(tipo, nome, new Date().toISOString().slice(0,10));
+  saveDB(); toastSuccess('Fornitore aggiornato'); renderUtenze();
+}
+let utenzeStoricoOpen = {}; // { Luce:false, Gas:false, Acqua:false } — storico fornitori collassato di default
+function renderUtenze(){
+  const el = document.getElementById('view-utenze');
+  if(!el) return;
+  ensureUtenzeFornitori();
+  const stats = computeUtenzeStats();
+  const now = new Date();
+  const curYear = String(now.getFullYear());
+  const annoCorrente = stats.byYear[curYear] || {};
+  const totaleAnno = UTENZE_DETTAGLI.reduce((s,t)=>s+(annoCorrente[t]||0),0);
+  let vocePrincipale = null, voceMax = 0;
+  UTENZE_DETTAGLI.forEach(t=>{ if((annoCorrente[t]||0) > voceMax){ voceMax = annoCorrente[t]; vocePrincipale = t; } });
+
+  const monthKeys = Object.keys(stats.byMonth).sort().slice(-12);
+  const years = Object.keys(stats.byYear).sort().slice(-5);
+
+  const isDark = currentTheme()!=='light';
+  const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+  const textColor = isDark ? '#93A3AA' : '#5C6B72';
+  const ICON_FLAME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 17a2.5 2.5 0 0 0 2.5-2.5c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7.5 7.5 0 1 1-15 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>';
+  const UTENZE_ICONE = { Luce: ico('zap',16), Gas: ICON_FLAME, Acqua: ico('droplet',16), Rifiuti: ico('trash',16) };
+
+  el.innerHTML = `
+    <div class="topbar">
+      <div>
+        <div class="page-title">Utenze</div>
+        <div class="page-sub">Andamento di luce, gas, acqua e altre bollette</div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-sm" id="btnUtenzaPromemoria">${ico('calendar',14)} Promemoria</button>
+        <button class="btn btn-primary btn-sm" id="btnNuovaBolletta">+ Registra bolletta</button>
+      </div>
+    </div>
+
+    <div class="grid kpi-grid cols-3" style="margin-bottom:22px;">
+      <div class="kpi-card">
+        <div class="kpi-bar" style="background:var(--coral);"></div>
+        <div class="kpi-label">${ico('wallet')} Spesa utenze ${esc(curYear)}</div>
+        <div class="kpi-value" id="kpiUtenzeAnno"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-bar" style="background:${vocePrincipale?UTENZE_COLORI[vocePrincipale]:'var(--amber)'};"></div>
+        <div class="kpi-label">Voce che pesa di più</div>
+        <div class="kpi-value" style="font-size:18px;">${vocePrincipale ? esc(vocePrincipale) : '—'}</div>
+        <div class="kpi-compare">${vocePrincipale ? fmtEUR(voceMax)+' quest\'anno' : 'nessun dato ancora'}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-bar" style="background:var(--blue);"></div>
+        <div class="kpi-label">Fornitori attuali</div>
+        <div style="font-size:12.5px; line-height:1.7; margin-top:2px;">
+          ${UTENZE_CON_DETTAGLI.map(t=>`<div>${UTENZE_ICONE[t]} ${esc(t)}: <b>${esc(fornitoreAttuale(t)||'—')}</b></div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:22px;">
+      <div class="card-title">${ico('activity')} Andamento mensile per utenza</div>
+      <div class="chart-wrap-sm"><canvas id="chartUtenzeMese"></canvas></div>
+    </div>
+
+    <div class="card" style="margin-bottom:22px;">
+      <div class="card-title">${ico('pieChart')} Confronto anno su anno</div>
+      <div class="chart-wrap-sm"><canvas id="chartUtenzeAnno"></canvas></div>
+    </div>
+
+    <div id="utenzeSezioni"></div>
+  `;
+
+  document.getElementById('btnNuovaBolletta').onclick = openNuovaBollettaModal;
+  document.getElementById('btnUtenzaPromemoria').onclick = openUtenzaPromemoriaModal;
+
+  animateNumber(document.getElementById('kpiUtenzeAnno'), null, totaleAnno, fmtEUR);
+
+  const dsMese = UTENZE_DETTAGLI.map(t=>({
+    label: t,
+    data: monthKeys.map(k=>(stats.byMonth[k]||{})[t]||0),
+    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--'+UTENZE_COLORI_VAR[t]).trim() || '#999',
+    backgroundColor: 'transparent',
+    tension: .3,
+  }));
+  if(charts.utenzeMese) charts.utenzeMese.destroy();
+  charts.utenzeMese = new Chart(document.getElementById('chartUtenzeMese'), {
+    type:'line',
+    data:{ labels: monthKeys.map(k=>monthName(parseInt(k.slice(5,7),10)).slice(0,3)+' \''+k.slice(2,4)), datasets: dsMese },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{color:textColor,boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+ctx.parsed.y.toLocaleString('it-IT',{style:'currency',currency:'EUR'})}}}, scales:{ x:{ grid:{display:false}, ticks:{color:textColor,font:{size:10.5}} }, y:{ grid:{color:gridColor}, ticks:{color:textColor,font:{size:11}, callback:v=>'€'+v} } } }
+  });
+
+  const dsAnno = UTENZE_DETTAGLI.map(t=>({
+    label: t,
+    data: years.map(y=>(stats.byYear[y]||{})[t]||0),
+    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--'+UTENZE_COLORI_VAR[t]).trim() || '#999',
+    borderRadius:4, maxBarThickness:26,
+  }));
+  if(charts.utenzeAnno) charts.utenzeAnno.destroy();
+  charts.utenzeAnno = new Chart(document.getElementById('chartUtenzeAnno'), {
+    type:'bar',
+    data:{ labels: years, datasets: dsAnno },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{color:textColor,boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+ctx.parsed.y.toLocaleString('it-IT',{style:'currency',currency:'EUR'})}}}, scales:{ x:{ grid:{display:false}, ticks:{color:textColor,font:{size:11}} }, y:{ grid:{color:gridColor}, ticks:{color:textColor,font:{size:11}, callback:v=>'€'+v} } } }
+  });
+
+  renderUtenzeSezioni(stats, UTENZE_ICONE);
+}
+function renderUtenzeSezioni(stats, UTENZE_ICONE){
+  const wrap = document.getElementById('utenzeSezioni');
+  if(!wrap) return;
+  wrap.innerHTML = UTENZE_DETTAGLI.map(t=>{
+    const rows = stats.rows.filter(m=>m.descrizione===t).sort((a,b)=>(b.data||'').localeCompare(a.data||'')).slice(0,8);
+    const conFornitore = UTENZE_CON_DETTAGLI.includes(t);
+    const storico = conFornitore ? (DB.utenzeFornitori[t]||[]).slice().reverse() : [];
+    const open = !!utenzeStoricoOpen[t];
+    return `<div class="card" style="margin-bottom:16px;">
+      <div class="topbar" style="margin-bottom:12px;">
+        <div class="card-title" style="margin-bottom:0; display:flex; align-items:center; gap:8px;">${UTENZE_ICONE[t]} ${esc(t)}</div>
+        ${conFornitore ? `<button class="btn btn-sm cambiaFornitoreBtn" data-tipo="${esc(t)}">${ico('edit',13)} Cambia fornitore</button>` : ''}
+      </div>
+      ${conFornitore ? `
+      <div class="info-row" style="margin-bottom:8px;"><span>Fornitore attuale</span><b>${esc(fornitoreAttuale(t)||'—')}</b></div>
+      <div class="topbar" style="cursor:pointer; margin-bottom:${open?'8px':'0'};" data-tipo-toggle="${esc(t)}">
+        <span style="font-size:12.5px; color:var(--text-faint); display:flex; align-items:center; gap:6px;">
+          <span class="mov-year-chevron" style="transform:rotate(${open?'90deg':'0deg'}); display:inline-block; transition:transform .15s;">▶</span>
+          Storico fornitori (${storico.length})
+        </span>
+      </div>
+      ${open ? (storico.length ? `<div style="margin-bottom:10px;">${storico.map((f)=>`<div class="info-row"><span>dal ${fmtDate(f.dal)}</span><b>${esc(f.nome)}</b></div>`).join('')}</div>` : `<div class="empty-state" style="padding:8px 0; margin-bottom:10px;">Nessuno storico ancora.</div>`) : ''}
+      ` : ''}
+      <div class="section-label" style="margin-top:4px;">Ultime bollette</div>
+      ${rows.length ? `<div class="table-scroll"><table class="ledger-manut">
+        <thead><tr><th>Data</th><th class="num">Importo</th>${conFornitore?'<th class="num">Consumo</th><th class="num">€/unità</th><th>Fornitore</th>':''}<th></th></tr></thead>
+        <tbody>${rows.map(m=>{
+          const costoUnita = (m.consumo && m.consumo>0) ? (m.uscite/m.consumo) : null;
+          return `<tr data-id="${m.id}">
+            <td>${fmtDate(m.data)}</td>
+            <td class="num amt neg">${fmtEUR(m.uscite)}</td>
+            ${conFornitore?`<td class="num">${m.consumo!=null?m.consumo.toLocaleString('it-IT')+' '+(UTENZE_UNITA[t]||''):'—'}</td><td class="num">${costoUnita!=null?costoUnita.toLocaleString('it-IT',{minimumFractionDigits:3,maximumFractionDigits:3})+' €':'—'}</td><td>${esc(m.fornitore||'—')}</td>`:''}
+            <td><button class="btn btn-icon btn-sm editUtenzaMov" data-id="${m.id}">${ico('edit')}</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>` : `<div class="empty-state" style="padding:16px 0;">Nessuna bolletta registrata ancora.</div>`}
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('.cambiaFornitoreBtn').forEach(b=>b.onclick = ()=>cambiaFornitoreUtenza(b.dataset.tipo));
+  wrap.querySelectorAll('[data-tipo-toggle]').forEach(h=>h.onclick = ()=>{
+    const t = h.dataset.tipoToggle;
+    utenzeStoricoOpen[t] = !utenzeStoricoOpen[t];
+    renderUtenze();
+  });
+  wrap.querySelectorAll('.editUtenzaMov').forEach(b=>b.onclick = ()=>openBollettaModal(b.dataset.id, renderUtenze));
 }
 
 /* ---- Gasolio: statistiche di spesa (totale, medie, andamento mensile, incidenza, costo/km) ----
