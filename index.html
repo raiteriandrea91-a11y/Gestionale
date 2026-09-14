@@ -384,7 +384,18 @@ button .ic-svg, .btn .ic-svg{vertical-align:-3px;}
 @media(max-width:880px){ .settings-mobile-only{display:block;} }
 
 
-main{margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%; padding:28px 34px 60px; transition:margin-left .22s ease; height:100vh; height:100dvh; overflow-y:auto; overflow-x:hidden;}
+main{
+  margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%;
+  /* Padding orizzontale che cresce oltre i 34px solo quando lo spazio disponibile supera
+     --content-max-w: così su schermi normali/portatili il layout resta identico a prima,
+     ma su monitor molto larghi il contenuto (KPI, tabelle, grafici) resta leggibile invece
+     di stirarsi edge-to-edge, restando comunque centrato. */
+  --content-max-w:1440px;
+  padding-top:28px; padding-bottom:60px;
+  padding-left:max(34px, calc((100% - var(--content-max-w)) / 2));
+  padding-right:max(34px, calc((100% - var(--content-max-w)) / 2));
+  transition:margin-left .22s ease; height:100vh; height:100dvh; overflow-y:auto; overflow-x:hidden;
+}
 
 .topbar{display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:22px; gap:14px; flex-wrap:wrap;}
 .page-title{font-size:22px; font-weight:700; letter-spacing:-.02em;}
@@ -572,6 +583,13 @@ main{margin-left:var(--sidebar-w); flex:1; min-width:0; max-width:100%; padding:
   .mov-table tbody tr:nth-of-type(8), .ledger-table tbody tr:nth-of-type(8), .search-res-table tbody tr:nth-of-type(8){animation-delay:.23s;}
   @keyframes rowFadeInDesktop{from{opacity:0;} to{opacity:1;}}
 }
+/* ---------- Intestazioni ordinabili (click per riordinare) — usate in Ricerca ---------- */
+.sortable-th{cursor:pointer; user-select:none; white-space:nowrap; transition:color .12s ease;}
+.sortable-th:hover{color:var(--text);}
+.sortable-th .sort-ic{display:inline-block; margin-left:3px; vertical-align:-2px; opacity:.3; transition:opacity .15s ease, transform .15s ease;}
+.sortable-th.sort-active{color:var(--text);}
+.sortable-th.sort-active .sort-ic{opacity:.9;}
+.sortable-th.sort-asc .sort-ic{transform:rotate(180deg);}
 .mov-table thead th, .ledger-table thead th{padding:6px 12px; border-bottom:1px solid var(--border);}
 .mov-table tbody td, .ledger-table tbody td{padding:6px 12px; border-bottom:1px solid var(--border-soft);}
 .mov-table tbody tr[data-id]:hover, .ledger-table tbody tr:hover{background:var(--surface-2);}
@@ -1773,7 +1791,7 @@ function ensureVersamentiRef(){
   if(!DB.versamentiRef) DB.versamentiRef = { categoria:'Altre entrate', dettaglio:'Versamenti' };
 }
 function ensureAutoAutostrade(){
-  if(DB.auto && !DB.auto.autostrade) DB.auto.autostrade = { importo:null, scadenza:null };
+  if(DB.auto && !DB.auto.autostrade) DB.auto.autostrade = { servizio:null, mesi:1, metodoPagamento:null, importo:null, scadenza:null };
 }
 /* Utenze: quali dettagli di "Casa" sono trattati come bollette nella scheda Utenze, quali di questi
    hanno anche consumo (kWh/m³) e fornitore tracciabile, e le unità di misura per ciascuno. */
@@ -2037,19 +2055,41 @@ function advanceAutoRenewals(){
   });
   if(changed) saveDB();
 }
-/* ---- Rinnovo manuale: pulsante "Rinnovato" nella card, avanza la scadenza di un periodo (o più,
+/* ---- Rinnovo manuale: pulsante "Rinnova" nel menu, avanza la scadenza di un periodo (o più,
    se era rimasta indietro di più cicli) fino a superare la data odierna — stessa logica del rinnovo
    automatico, ma innescata da un click invece che dal semplice passare del tempo. ---- */
-function rinnovaAbbonamentoManuale(id){
-  const a = DB.abbonamenti.find(x=>x.id===id);
-  if(!a || !a.mesi) return;
+function prossimaScadenzaAbbonamento(a){
   const today = new Date(); today.setHours(0,0,0,0);
   let dt = a.scadenza ? new Date(a.scadenza+'T00:00:00') : new Date(today);
   if(isNaN(dt)) dt = new Date(today);
   dt.setMonth(dt.getMonth()+a.mesi);
   while(dt < today){ dt.setMonth(dt.getMonth()+a.mesi); }
-  a.scadenza = dt.toISOString().slice(0,10);
+  return dt.toISOString().slice(0,10);
+}
+function rinnovaAbbonamentoManuale(id){
+  const a = DB.abbonamenti.find(x=>x.id===id);
+  if(!a || !a.mesi) return;
+  a.scadenza = prossimaScadenzaAbbonamento(a);
   saveDB(); toastSuccess('Abbonamento rinnovato — nuova scadenza '+fmtDate(a.scadenza)); renderAbbonamenti();
+}
+// Voci del menu kebab (3 puntini) di ogni card abbonamento.
+function abbKebabItems(a){
+  const items = [{ label:'Modifica', icon:'edit', onClick:()=>openSubModal(a.id) }];
+  if(a.rinnovo==='Manuale' && a.stato==='Attivo' && a.mesi){
+    items.push({ label:'Rinnova', icon:'checkCircle', onClick: async ()=>{
+      const nuovaData = fmtDate(prossimaScadenzaAbbonamento(a));
+      if(await customConfirm(`Segnare "${a.servizio}" come rinnovato? La scadenza passerà al ${nuovaData}.`)){
+        rinnovaAbbonamentoManuale(a.id);
+      }
+    }});
+  }
+  if(a.link){
+    items.push({ label:'Link al sito', icon:'link', onClick:()=>window.open(linkUtiliHref(a.link), '_blank', 'noopener') });
+  }
+  items.push({ label:'Elimina', icon:'trash', danger:true, onClick:()=>{
+    removeByIdWithUndo(DB.abbonamenti, a.id, 'Abbonamento eliminato', renderCurrentView);
+  }});
+  return items;
 }
 
 function uid(prefix){ return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -2141,6 +2181,10 @@ function fmtDayShort(d){
 }
 function monthName(m){
   return ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'][m-1] || '';
+}
+// Opzioni <option> per i mesi (valore a due cifre "01".."12", come richiesto dal formato periodo AAAA-MM).
+function monthOptionsHtml(){
+  return Array.from({length:12},(_,i)=>i+1).map(m=>`<option value="${String(m).padStart(2,'0')}">${monthName(m)}</option>`).join('');
 }
 function daysUntil(dateStr){
   if(!dateStr) return null;
@@ -3756,17 +3800,28 @@ function getScadenzeUrgenti(){
     return d!==null && d<=it.soglia;
   });
 }
+// Voci pianificate (DB.pianificati) già scadute (data prevista oggi o nel passato): stesso
+// criterio di urgenza delle scadenze abbonamenti/auto, così il badge in sidebar è coerente.
+function getPianificatiScaduti(){
+  if(!Array.isArray(DB.pianificati)) return [];
+  return DB.pianificati.filter(p=>{
+    const d = daysUntil(p.data);
+    return d!==null && d<=0;
+  });
+}
 function updateNavBadges(){
   const urgenti = getScadenzeUrgenti();
   const countFor = view => urgenti.filter(it=>it.view===view).length;
-  ['abbonamenti','auto'].forEach(view=>{
+  const counts = { abbonamenti: countFor('abbonamenti'), auto: countFor('auto'), movimenti: getPianificatiScaduti().length };
+  Object.keys(counts).forEach(view=>{
     const navEl = document.querySelector(`.nav-item[data-view="${view}"]`);
     if(!navEl) return;
     let badge = navEl.querySelector('.nav-badge');
-    const n = countFor(view);
+    const n = counts[view];
     if(n>0){
       if(!badge){ badge = document.createElement('span'); badge.className='nav-badge'; navEl.appendChild(badge); }
       badge.textContent = n>9 ? '9+' : String(n);
+      if(view==='movimenti') badge.title = `${n} voce/i pianificata/e scaduta/e`;
     } else if(badge){ badge.remove(); }
   });
 }
@@ -7921,6 +7976,29 @@ function renderConfrontoResults(){
 
 let searchMovPageSize = 100;
 let searchMovVisibleCount = 100;
+// Ordinamento cliccabile della tabella Movimenti in Ricerca (default: data, più recenti prima).
+let searchMovSort = { key:'data', dir:'desc' };
+function searchMovSortValue(m, key){
+  if(key==='categoria') return (m.categoria||'').toLowerCase();
+  if(key==='dettaglio') return (m.descrizione||'').toLowerCase();
+  if(key==='importo') return m.entrate ? m.entrate : -(m.uscite||0);
+  return m.data||''; // 'data' e fallback
+}
+function sortSearchMovMatches(arr){
+  const { key, dir } = searchMovSort;
+  const mul = dir==='asc' ? 1 : -1;
+  return arr.slice().sort((a,b)=>{
+    const va = searchMovSortValue(a,key), vb = searchMovSortValue(b,key);
+    if(va<vb) return -1*mul;
+    if(va>vb) return 1*mul;
+    return 0;
+  });
+}
+function searchMovSortThHtml(key, label, extraClass){
+  const active = searchMovSort.key===key;
+  const cls = ['sortable-th', extraClass||'', active?'sort-active':'', active&&searchMovSort.dir==='asc'?'sort-asc':''].filter(Boolean).join(' ');
+  return `<th class="${cls}" data-sort-key="${key}">${label}<span class="sort-ic">${ico('chevronDown',11)}</span></th>`;
+}
 function doSearch(keepSelection, keepPage){
   if(!keepSelection){ searchSelected.clear(); searchMovSelCtx.active=false; searchMovSelCtx.selected.clear(); }
   if(!keepPage) searchMovVisibleCount = searchMovPageSize;
@@ -7931,7 +8009,8 @@ function doSearch(keepSelection, keepPage){
     results.innerHTML = `<div class="empty-state"><div class="ic">${ico('search')}</div>Scegli uno o più filtri qui sopra per iniziare a esplorare i tuoi dati.</div>`;
     return;
   }
-  const { movMatches, subMatches, autoMatches } = computeSearchMatches();
+  const { movMatches: movMatchesRaw, subMatches, autoMatches } = computeSearchMatches();
+  const movMatches = sortSearchMovMatches(movMatchesRaw);
 
   // Statistiche in tempo reale sui movimenti trovati
   const movEntrate = movimentiForTotals(movMatches).reduce((s,m)=>s+(m.entrate||0),0);
@@ -7953,7 +8032,7 @@ function doSearch(keepSelection, keepPage){
 
   if(movMatches.length){
     html += `<div class="section-label">Movimenti (${movMatches.length})</div><div class="card list-card mov-search-block"><div class="table-scroll"><table class="search-res-table search-res-mov">
-      <thead><tr><th class="check-col"></th><th class="src-col"></th><th>Data</th><th>Categoria</th><th>Dettaglio</th><th class="num">Importo</th><th></th></tr></thead><tbody>`;
+      <thead><tr><th class="check-col"></th><th class="src-col"></th>${searchMovSortThHtml('data','Data')}${searchMovSortThHtml('categoria','Categoria')}${searchMovSortThHtml('dettaglio','Dettaglio')}${searchMovSortThHtml('importo','Importo','num')}<th></th></tr></thead><tbody>`;
     movMatches.slice(0,searchMovVisibleCount).forEach(m=>{
       const fonteIcon = movimentoMetodoIconHtml(m);
       html += `<tr data-id="${m.id}">
@@ -8038,6 +8117,14 @@ const searchMovSelCfg = {
 function wireSearchRowActions(){
   const btnLoadMore = document.getElementById('btnSearchLoadMore');
   if(btnLoadMore) btnLoadMore.onclick = ()=>{ searchMovVisibleCount += searchMovPageSize; doSearch(true, true); };
+  document.querySelectorAll('#searchResults .search-res-mov .sortable-th').forEach(th=>{
+    th.onclick = ()=>{
+      const key = th.dataset.sortKey;
+      if(searchMovSort.key===key) searchMovSort.dir = searchMovSort.dir==='asc' ? 'desc' : 'asc';
+      else searchMovSort = { key, dir: key==='data' ? 'desc' : 'asc' };
+      doSearch(true, true);
+    };
+  });
   document.querySelectorAll('#searchResults .search-res-table tr[data-id]').forEach(row=>{
     row.onclick = (e)=>{
       if(e.target.closest('.sel-check, .row-actions, .etichetta-chip-click, [data-src-history]')) return;
@@ -8282,8 +8369,7 @@ function renderSubList(animate){
         <div class="sub-card-top">
           <div class="sub-card-name"><span class="sub-cat-dot" style="background:${categoriaAbbColor(a.categoriaAbb)};"></span><span class="sub-name">${esc(a.servizio)}</span></div>
           <div class="row-actions">
-            <button class="btn btn-icon btn-sm editSub" data-id="${a.id}" title="Modifica">${ico('edit')}</button>
-            <button class="btn btn-icon btn-sm delSubCard" data-id="${a.id}" title="Elimina">${ico('trash')}</button>
+            <button class="btn btn-icon btn-sm kebab-btn abbKebab" data-id="${a.id}" title="Altre azioni">${ico('moreVertical')}</button>
           </div>
         </div>
         <div class="sub-meta">${periodicita} · ${esc(a.metodoPagamento||'—')} · ${esc(a.rinnovo||'—')}</div>
@@ -8293,10 +8379,7 @@ function renderSubList(animate){
             <button class="sub-card-bell ${subAvvisoOn(a)?'on':''}" data-id="${a.id}" title="${subAvvisoOn(a)?'Notifica scadenza attiva':'Notifica scadenza disattivata'}">${subAvvisoOn(a)?ico('bell'):ico('bellOff')}</button>
             Scade il <b>${fmtDate(a.scadenza)}</b>
           </span>
-          <span style="display:flex; align-items:center; gap:6px;">
-            ${countdownBadge(a.scadenza, a.stato==='Attivo'?'Scadenza non impostata':'Non attivo')}
-            ${a.rinnovo==='Manuale' && a.stato==='Attivo' && a.mesi ? `<button class="btn btn-sm rinnovaSubBtn" data-id="${a.id}" title="Segna come rinnovato e avanza la scadenza">${ico('checkCircle',13)} Rinnovato</button>` : ''}
-          </span>
+          ${countdownBadge(a.scadenza, a.stato==='Attivo'?'Scadenza non impostata':'Non attivo')}
         </div>
       </div>`;
     }).join('') || `<div class="empty-state">Nessun abbonamento registrato.</div>`;
@@ -8330,18 +8413,19 @@ function renderSubList(animate){
     renderSubList(false);
   });
   container.querySelectorAll('.editSub').forEach(b=>b.onclick = ()=>openSubModal(b.dataset.id));
-  container.querySelectorAll('.rinnovaSubBtn').forEach(b=>b.onclick = (e)=>{
+  container.querySelectorAll('.abbKebab').forEach(b=>b.onclick = (e)=>{
     e.stopPropagation();
-    rinnovaAbbonamentoManuale(b.dataset.id);
+    const a = DB.abbonamenti.find(x=>x.id===b.dataset.id);
+    if(a) openKebabMenu(b, abbKebabItems(a));
   });
   container.querySelectorAll('.delSubCard').forEach(b=>b.onclick = ()=>{
     removeByIdWithUndo(DB.abbonamenti, b.dataset.id, 'Abbonamento eliminato', renderAbbonamenti);
   });
-  // Su mobile le azioni (modifica/elimina) sono nascoste finché non si tocca la card — stesso
-  // pattern usato in Movimenti/Ricerca. Evita di toccare azioni "invisibili" per sbaglio.
+  // Su mobile (dove non esiste l'hover) il pulsante dei 3 puntini si rivela toccando la card,
+  // stesso pattern già usato in Movimenti/Ricerca invece di lasciarlo sempre visibile.
   container.querySelectorAll('.sub-card[data-id]').forEach(card=>{
     card.onclick = (e)=>{
-      if(e.target.closest('.row-actions, .sub-card-bell')) return;
+      if(e.target.closest('.row-actions')) return;
       const willExpand = !card.classList.contains('expanded');
       card.classList.toggle('expanded');
       if(willExpand) suppressGhostClick(card.querySelector('.row-actions'));
@@ -8366,6 +8450,7 @@ function openSubModal(id){
       <div class="slim-row"><span class="slim-icon">${ico('folder',14)}</span><div class="slim-main field"><label>Categoria</label><select id="sCategoriaAbb">${DB.categorieAbbonamenti.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></div></div>
       <div class="slim-row"><span class="slim-icon">${ico('tag',14)}</span><div class="slim-main field"><label>Appare come dettaglio in</label><select id="sCategoriaMovimento">${DB.categorieUscite.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></div></div>
       <div class="slim-row"><span class="slim-icon">${ico('calendar',14)}</span><div class="slim-main field"><label>Data scadenza / rinnovo</label><input type="date" id="sScadenza" value="${editing?editing.scadenza||'':''}"></div></div>
+      <div class="slim-row"><span class="slim-icon">${ico('link',14)}</span><div class="slim-main field"><label>Link al sito (opzionale)</label><input type="text" id="sLink" value="${editing&&editing.link?esc(editing.link):''}" placeholder="https://..."></div></div>
       <div class="slim-row"><span class="slim-icon">${ico('check',14)}</span><div class="slim-main field"><label>Stato</label><select id="sStato"><option value="Attivo">Attivo</option><option value="Non attivo">Non attivo</option></select></div></div>
     </div>
     <div class="modal-foot">
@@ -8408,8 +8493,9 @@ function openSubModal(id){
       categoriaAbb: document.getElementById('sCategoriaAbb').value,
       categoriaMovimento: document.getElementById('sCategoriaMovimento').value,
       scadenza: document.getElementById('sScadenza').value || null,
+      link: document.getElementById('sLink').value.trim() || null,
       stato: document.getElementById('sStato').value,
-      avviso: true
+      avviso: editing ? editing.avviso!==false : true
     };
     if(editing){ Object.assign(editing, payload); }
     else { DB.abbonamenti.push({ id: uid('a'), ...payload }); }
@@ -8586,9 +8672,17 @@ function openBollettaModal(id, onSaved){
       </div>
       <div class="slim-row">
         <span class="slim-icon">${ico('calendar',14)}</span>
-        <div class="slim-main" style="display:flex; gap:10px;">
-          <div class="field" style="flex:1;"><label>Periodo di competenza — dal (opzionale)</label><input type="month" id="ubPeriodoDal" value="${editing && editing.periodoDal ? editing.periodoDal : ''}"></div>
-          <div class="field" style="flex:1;"><label>al</label><input type="month" id="ubPeriodoAl" value="${editing && editing.periodoAl ? editing.periodoAl : ''}"></div>
+        <div class="slim-main" style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label style="margin:0; width:22px; flex-shrink:0; font-size:12.5px; font-weight:600; color:var(--text-dim);">Dal</label>
+            <select id="ubPeriodoDalMese" style="flex:1.3;"><option value="">—</option>${monthOptionsHtml()}</select>
+            <select id="ubPeriodoDalAnno" style="flex:1;"></select>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label style="margin:0; width:22px; flex-shrink:0; font-size:12.5px; font-weight:600; color:var(--text-dim);">Al</label>
+            <select id="ubPeriodoAlMese" style="flex:1.3;"><option value="">—</option>${monthOptionsHtml()}</select>
+            <select id="ubPeriodoAlAnno" style="flex:1;"></select>
+          </div>
         </div>
       </div>
       <div class="slim-row" id="ubFornitoreRow">
@@ -8636,6 +8730,22 @@ function openBollettaModal(id, onSaved){
   const metodoOptions = ['Conto corrente', ...DB.metodiPagamento.filter(m=>m!=='Conto corrente')];
   metodoSel.innerHTML = metodoOptions.map(m=>`<option value="${esc(m)}" ${m===((editing&&editing.metodoPagamento)||'Conto corrente')?'selected':''}>${esc(m)}</option>`).join('');
 
+  const annoCorrente = new Date().getFullYear();
+  const anniOptions = ['', ...Array.from({length:5},(_,i)=>annoCorrente-3+i)];
+  ['ubPeriodoDalAnno','ubPeriodoAlAnno'].forEach(id=>{
+    document.getElementById(id).innerHTML = anniOptions.map(y=>`<option value="${y}">${y||'—'}</option>`).join('');
+  });
+  if(editing && editing.periodoDal){
+    const [y,m] = editing.periodoDal.split('-');
+    document.getElementById('ubPeriodoDalMese').value = m;
+    document.getElementById('ubPeriodoDalAnno').value = y;
+  }
+  if(editing && editing.periodoAl){
+    const [y,m] = editing.periodoAl.split('-');
+    document.getElementById('ubPeriodoAlMese').value = m;
+    document.getElementById('ubPeriodoAlAnno').value = y;
+  }
+
   document.getElementById('ubClose').onclick = closeModal;
   document.getElementById('ubCancel').onclick = closeModal;
   const pad2 = n=>String(n).padStart(2,'0');
@@ -8660,8 +8770,8 @@ function openBollettaModal(id, onSaved){
     const lettura = letturaRaw!=='' && !isNaN(parseFloat(letturaRaw)) ? parseFloat(letturaRaw) : null;
     const fornitoreRaw = conFornitore ? document.getElementById('ubFornitore').value.trim() : '';
     const fornitore = fornitoreRaw || null;
-    const periodoDal = document.getElementById('ubPeriodoDal').value || null;
-    const periodoAl = document.getElementById('ubPeriodoAl').value || null;
+    const periodoDal = (document.getElementById('ubPeriodoDalMese').value && document.getElementById('ubPeriodoDalAnno').value) ? `${document.getElementById('ubPeriodoDalAnno').value}-${document.getElementById('ubPeriodoDalMese').value}` : null;
+    const periodoAl = (document.getElementById('ubPeriodoAlMese').value && document.getElementById('ubPeriodoAlAnno').value) ? `${document.getElementById('ubPeriodoAlAnno').value}-${document.getElementById('ubPeriodoAlMese').value}` : null;
 
     const mancanti = [];
     if(!data) mancanti.push('Data');
@@ -8692,8 +8802,10 @@ function openBollettaModal(id, onSaved){
     document.getElementById('ubImporto').value = '';
     document.getElementById('ubConsumo').value = '';
     document.getElementById('ubLettura').value = '';
-    document.getElementById('ubPeriodoDal').value = '';
-    document.getElementById('ubPeriodoAl').value = '';
+    document.getElementById('ubPeriodoDalMese').value = '';
+    document.getElementById('ubPeriodoDalAnno').value = '';
+    document.getElementById('ubPeriodoAlMese').value = '';
+    document.getElementById('ubPeriodoAlAnno').value = '';
     document.getElementById('ubNote').value = '';
     document.getElementById('ubImporto').focus();
   };
@@ -9045,7 +9157,7 @@ function openAutoHeaderModal(){
 /* ---- Modale unica: tutte le scadenze (assicurazione, bollo, revisione, tagliando) + link ---- */
 function openScadenzeAllModal(){
   const a = DB.auto;
-  a.autostrade = a.autostrade || { importo:null, scadenza:null };
+  a.autostrade = a.autostrade || { servizio:null, mesi:1, metodoPagamento:null, importo:null, scadenza:null };
   const { assic: assicLink, bollo: bolloLink } = splitAutoLinks();
   openModal(`
     <div class="modal-head"><h3>Modifica servizi</h3><button class="close-x" id="saClose">${ico('x')}</button></div>
@@ -9075,9 +9187,17 @@ function openScadenzeAllModal(){
 
       <div class="card-title" style="margin-top:18px;">Autostrade</div>
       <div class="field-row">
-        <div class="field"><label>Canone (€)</label><input type="number" step="0.01" inputmode="decimal" id="saAutostradeImporto" value="${a.autostrade.importo!==null&&a.autostrade.importo!==undefined?a.autostrade.importo:''}"></div>
-        <div class="field"><label>Scadenza</label><input type="date" id="saAutostradeData" value="${a.autostrade.scadenza||''}"></div>
+        <div class="field"><label>Servizio</label><input type="text" id="saAutostradeServizio" value="${esc(a.autostrade.servizio||'')}" placeholder="Es. Telepass, Unipol Move"></div>
+        <div class="field"><label>Frequenza di rinnovo</label><select id="saAutostradeMesi">${[1,2,3,4,6,12].map(n=>{
+          const labels = {1:'Mensile',2:'Bimestrale',3:'Trimestrale',4:'Quadrimestrale',6:'Semestrale',12:'Annuale'};
+          return `<option value="${n}" ${String(a.autostrade.mesi||1)===String(n)?'selected':''}>${labels[n]}</option>`;
+        }).join('')}</select></div>
       </div>
+      <div class="field-row">
+        <div class="field"><label>Metodo di pagamento</label><select id="saAutostradeMetodo">${DB.metodiPagamento.map(m=>`<option value="${esc(m)}" ${a.autostrade.metodoPagamento===m?'selected':''}>${esc(m)}</option>`).join('')}</select></div>
+        <div class="field"><label>Canone (€)</label><input type="number" step="0.01" inputmode="decimal" id="saAutostradeImporto" value="${a.autostrade.importo!==null&&a.autostrade.importo!==undefined?a.autostrade.importo:''}"></div>
+      </div>
+      <div class="field"><label>Scadenza</label><input type="date" id="saAutostradeData" value="${a.autostrade.scadenza||''}"></div>
     </div>
     <div class="modal-foot"><button class="btn" id="saCancel">Annulla</button><button class="btn btn-primary" id="saSave">Salva</button></div>
   `);
@@ -9096,6 +9216,9 @@ function openScadenzeAllModal(){
     a.revisione.scadenza = document.getElementById('saRevisData').value || null;
     a.tagliando.kmProssimo = document.getElementById('saTagKm').value.trim() || null;
 
+    a.autostrade.servizio = document.getElementById('saAutostradeServizio').value.trim() || null;
+    a.autostrade.mesi = parseInt(document.getElementById('saAutostradeMesi').value,10) || 1;
+    a.autostrade.metodoPagamento = document.getElementById('saAutostradeMetodo').value || null;
     a.autostrade.importo = parseFloat(document.getElementById('saAutostradeImporto').value) || null;
     a.autostrade.scadenza = document.getElementById('saAutostradeData').value || null;
 
@@ -9152,7 +9275,7 @@ function renderAutoOtherLinksRow(){
 function renderAutoNew(){
   const el = document.getElementById('view-auto');
   const a = DB.auto;
-  a.autostrade = a.autostrade || { importo:null, scadenza:null };
+  a.autostrade = a.autostrade || { servizio:null, mesi:1, metodoPagamento:null, importo:null, scadenza:null };
   const totManutenzione = a.manutenzione.reduce((s,x)=>s+(x.costo||0),0);
 
   const years = Object.keys(a.kmAnnuali.anni||{}).sort((x,y)=>Number(x)-Number(y));
@@ -9256,6 +9379,7 @@ function renderAutoNew(){
       <div class="info-card" style="border-color:var(--mint); display:flex; flex-direction:column;">
         <h4>${ico('road')} Autostrade <button class="sub-bell ${autoAvvisoOn('autostrade')?'on':''}" data-tipo="autostrade" title="${autoAvvisoOn('autostrade')?'Notifica scadenza attiva':'Notifica scadenza disattivata'}" style="margin-left:auto;">${autoAvvisoOn('autostrade')?ico('bell'):ico('bellOff')}</button></h4>
         <div style="flex:1;">
+          <div class="info-row"><span>Servizio</span><b>${esc(a.autostrade.servizio||'—')}</b></div>
           <div class="info-row"><span>Canone</span><b>${fmtEUR(a.autostrade.importo)}</b></div>
         </div>
         <div style="margin-top:auto;">
