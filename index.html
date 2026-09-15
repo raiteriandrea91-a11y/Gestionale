@@ -404,6 +404,10 @@ main{
 .view{display:none; animation:fadein .3s ease;}
 .view.active{display:block;}
 @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+/* Ingresso a cascata delle slide del "Wrapped": leggero scatto dal basso, sfalsato via
+   animation-delay inline per ciascuna slide (vedi openWrappedView). */
+@keyframes wrappedSlideIn{from{opacity:0; transform:translateY(14px) scale(.97);} to{opacity:1; transform:translateY(0) scale(1);}}
+.wrapped-slide{animation:wrappedSlideIn .5s cubic-bezier(.22,.68,0,1) both;}
 .odo-digit{display:inline-block; animation:odoRoll .5s cubic-bezier(.22,.68,0,1) both;}
 .odo-static{display:inline-block;}
 @keyframes odoRoll{from{transform:translateY(65%); opacity:0;} to{transform:translateY(0); opacity:1;}}
@@ -458,7 +462,9 @@ main{
 .two-col{grid-template-columns:1fr 1fr;}
 @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr);} .kpi-grid.cols-3{grid-template-columns:repeat(2,1fr);} .charts-grid{grid-template-columns:1fr;} .two-col{grid-template-columns:1fr;}}
 
-.kpi-card{background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); padding:17px 19px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
+.kpi-card{background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); padding:17px 19px; box-shadow:var(--shadow); position:relative; overflow:hidden; transition:transform .12s ease-out; will-change:transform;}
+/* Badge streak (mesi sotto media) accanto al Saldo Periodo: piccolo, discreto, appare solo se c'è una serie in corso. */
+.streak-pill{display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--text-dim); margin-top:6px;}
 .kpi-label{font-size:11.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; font-weight:600; display:flex; align-items:center; gap:6px;}
 .kpi-card .sparkline{display:block; width:100%; height:24px; margin-top:6px; opacity:.8;}
 .kpi-value{font-size:23px; font-weight:600; margin-top:9px; letter-spacing:-.01em; transition:color .4s ease;}
@@ -3457,8 +3463,216 @@ function computeComparisonInsight(){
   return { curLabel, prevLabel, deltaPct, positive: deltaPct<=0 };
 }
 
-let dashPrevTotals = null; // {entrate, uscite, saldo} — usati per animare i KPI da un render all'altro
+/* ---- Streak: mesi consecutivi sotto la media di spesa, badge discreto accanto al Saldo Periodo ----
+   Calcolato sugli ultimi 12 mesi solari (indipendente dal filtro Dashboard selezionato: è un
+   indicatore fisso, non cambia guardando un anno diverso). */
+function renderStreakBadge(){
+  const el = document.getElementById('streakBadge');
+  if(!el) return;
+  const today = new Date();
+  const keys = [];
+  for(let i=11;i>=0;i--){ const d=new Date(today.getFullYear(), today.getMonth()-i, 1); keys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
+  const monthly = keys.map(k=> DB.movimenti.reduce((s,m)=> (m.uscite && m.data && m.data.slice(0,7)===k && !isExcludedFromTotals(m)) ? s+m.uscite : s, 0));
+  const withData = monthly.filter(v=>v>0);
+  if(withData.length<2){ el.innerHTML=''; return; }
+  const avg = withData.reduce((s,v)=>s+v,0)/withData.length;
+  let streak=0;
+  for(let i=monthly.length-1;i>=0;i--){
+    if(monthly[i]<=0) continue; // mese senza dati: non interrompe né conta la serie
+    if(monthly[i]<avg) streak++; else break;
+  }
+  el.innerHTML = streak>0
+    ? `<span class="streak-pill" title="Mesi consecutivi con spesa sotto la tua media degli ultimi 12 mesi">🔥 ${streak} mes${streak===1?'e':'i'} sotto media</span>`
+    : '';
+}
+/* ---- Widget "un anno fa, in questo periodo": confronto costante col tuo stesso periodo di un
+   anno fa (dal 1° del mese corrente a oggi), indipendente dal filtro Dashboard selezionato. ---- */
+function renderYearAgoWidget(){
+  const el = document.getElementById('yearAgoWidget');
+  if(!el) return;
+  const now = new Date();
+  const startCur = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startPrev = new Date(now.getFullYear()-1, now.getMonth(), 1);
+  const endPrev = new Date(now.getFullYear()-1, now.getMonth(), now.getDate());
+  const sum = (from,to)=> DB.movimenti.reduce((s,m)=>{
+    if(!m.uscite || !m.data || isExcludedFromTotals(m)) return s;
+    const d = new Date(m.data+'T00:00:00');
+    return (d>=from && d<=to) ? s+m.uscite : s;
+  },0);
+  const curSpend = sum(startCur, now);
+  const prevSpend = sum(startPrev, endPrev);
+  if(prevSpend<=0){ el.style.display='none'; return; }
+  el.style.display='';
+  const delta = Math.round((curSpend-prevSpend)/prevSpend*100);
+  el.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+      <div>
+        <div class="card-title" style="margin-bottom:2px;">Un anno fa, stesso periodo</div>
+        <div style="font-size:11.5px; color:var(--text-faint);">1–${now.getDate()} ${esc(monthName(now.getMonth()+1))}, confrontato con lo stesso intervallo del ${now.getFullYear()-1}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:18px;">
+        <div style="text-align:right;">
+          <div class="mono" style="font-size:19px; font-weight:700;">${fmtEUR(curSpend)}</div>
+          <div style="font-size:10.5px; color:var(--text-faint);">quest'anno</div>
+        </div>
+        <div style="color:var(--text-faint); font-size:13px;">vs</div>
+        <div>
+          <div class="mono" style="font-size:19px; font-weight:700; color:var(--text-dim);">${fmtEUR(prevSpend)}</div>
+          <div style="font-size:10.5px; color:var(--text-faint);">${now.getFullYear()-1}</div>
+        </div>
+        <div style="font-size:13px; font-weight:700; color:${delta<=0?'var(--money-pos)':'var(--coral)'};">${delta>0?'+':''}${delta}%</div>
+      </div>
+    </div>`;
+}
+
+/* ==================== SIMULATORE "E SE..." ====================
+   Calcolatrice puramente in memoria: non tocca mai DB né saveDB(). Si basa sulla media mensile
+   degli ultimi 12 mesi per le categorie di spesa principali e per le entrate; gli slider spostano
+   percentualmente la spesa di ciascuna categoria, il campo extra aggiunge una spesa fissa
+   ipotetica (es. una futura rata mutuo) — tutto si resetta ogni volta che il modal si riapre. */
+function openSimulatoreModal(){
+  const today = new Date();
+  const keys = [];
+  for(let i=11;i>=0;i--){ const d=new Date(today.getFullYear(), today.getMonth()-i, 1); keys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
+  const usciteRecenti = DB.movimenti.filter(m=>m.uscite && m.data && keys.includes(m.data.slice(0,7)) && !isExcludedFromTotals(m));
+  const entrateRecenti = DB.movimenti.filter(m=>m.entrate && m.data && keys.includes(m.data.slice(0,7)) && !isExcludedFromTotals(m));
+  const byCat = {};
+  usciteRecenti.forEach(m=>{ byCat[m.categoria]=(byCat[m.categoria]||0)+m.uscite; });
+  const monthlyAvgEntrate = entrateRecenti.reduce((s,m)=>s+m.entrate,0)/12;
+  const topCats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([cat,tot])=>({cat, monthlyAvg: tot/12}));
+  if(!topCats.length){
+    openModal(`<div class="modal-head"><h3>${ico('calculator')} Simulatore "e se..."</h3><button class="close-x" id="simClose">${ico('x')}</button></div><div class="modal-body"><div class="empty-state" style="padding:24px;">Servono almeno alcuni mesi di spese registrate per poter simulare qualcosa.</div></div>`);
+    document.getElementById('simClose').onclick = closeModal;
+    return;
+  }
+  const html = `
+    <div class="modal-head"><h3>${ico('calculator')} Simulatore "e se..."</h3><button class="close-x" id="simClose">${ico('x')}</button></div>
+    <div class="modal-body">
+      <div class="page-sub" style="margin-bottom:16px;">Calcolo in memoria, non tocca i tuoi dati: sposta gli slider per vedere come cambierebbe il saldo annuo proiettato, basato sulla tua media degli ultimi 12 mesi.</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start;">
+        <div>
+          ${topCats.map((c,i)=>`
+            <div style="margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px;">
+                <span style="font-weight:600;">${esc(c.cat)}</span>
+                <span class="mono" id="simVal_${i}" style="color:var(--text-dim);">${fmtEUR(c.monthlyAvg)}/mese</span>
+              </div>
+              <input type="range" min="-40" max="40" value="0" step="5" data-idx="${i}" id="simSlider_${i}" style="width:100%;">
+            </div>
+          `).join('')}
+          <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border-soft);">
+            <label style="font-size:12.5px; font-weight:600; display:block; margin-bottom:6px;">+ Spesa fissa mensile ipotetica (es. rata mutuo)</label>
+            <input type="number" id="simExtra" value="0" min="0" step="10" style="width:140px; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); font-family:inherit;"> €/mese
+          </div>
+        </div>
+        <div class="card" style="text-align:center; padding:22px;">
+          <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-faint); margin-bottom:8px;">Saldo annuo proiettato</div>
+          <div class="mono" id="simTotal" style="font-size:28px; font-weight:700;">—</div>
+          <div id="simDelta" style="font-size:12.5px; margin-top:6px; font-weight:600;"></div>
+          <div class="chart-wrap" style="height:180px; margin-top:16px;"><canvas id="simChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  `;
+  openModalWide(html);
+  document.getElementById('simClose').onclick = closeModal;
+  const baseAnnual = (monthlyAvgEntrate - topCats.reduce((s,c)=>s+c.monthlyAvg,0)) * 12;
+  const sliderState = topCats.map(()=>0);
+  let simChart = null;
+  const isDark = currentTheme()!=='light';
+  const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+  const textColor = isDark ? '#93A3AA' : '#5C6B72';
+  function recompute(){
+    let totalMonthlySpend = 0;
+    topCats.forEach((c,i)=>{
+      const newVal = c.monthlyAvg * (1+sliderState[i]/100);
+      document.getElementById('simVal_'+i).textContent = fmtEUR(newVal)+'/mese';
+      totalMonthlySpend += newVal;
+    });
+    const extra = parseFloat(document.getElementById('simExtra').value)||0;
+    const annualBalance = (monthlyAvgEntrate - totalMonthlySpend - extra) * 12;
+    const totalEl = document.getElementById('simTotal');
+    totalEl.className = 'mono '+saldoClass(annualBalance);
+    animateNumber(totalEl, annualBalance);
+    const delta = annualBalance - baseAnnual;
+    const deltaEl = document.getElementById('simDelta');
+    deltaEl.style.color = delta>=0 ? 'var(--money-pos)' : 'var(--coral)';
+    deltaEl.textContent = (delta>=0?'+':'') + delta.toLocaleString('it-IT',{style:'currency',currency:'EUR'}) + ' rispetto a oggi';
+    const monthlyBars = Array.from({length:12},()=> monthlyAvgEntrate - totalMonthlySpend - extra);
+    const monthLabels = keys.map(k=>monthName(parseInt(k.slice(5,7))).slice(0,3));
+    if(simChart){ simChart.data.datasets[0].data = monthlyBars; simChart.update(); }
+    else{
+      simChart = new Chart(document.getElementById('simChart'), {
+        type:'bar',
+        data:{ labels: monthLabels, datasets:[{ data: monthlyBars, backgroundColor:'#49D9A8', borderRadius:4, maxBarThickness:20 }] },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{display:false}, ticks:{color:textColor,font:{size:9}}}, y:{grid:{color:gridColor}, ticks:{color:textColor,font:{size:10}, callback:v=>'€'+v}} } }
+      });
+    }
+  }
+  document.querySelectorAll('#modalBox input[type=range]').forEach((sl,i)=>{
+    sl.addEventListener('input', ()=>{ sliderState[i] = parseFloat(sl.value); recompute(); });
+  });
+  document.getElementById('simExtra').addEventListener('input', recompute);
+  recompute();
+}
+
+/* ==================== "IL TUO ANNO" (WRAPPED) ====================
+   Slide a scorrimento orizzontale con statistiche dell'anno in corso; i numeri contano verso
+   l'alto all'apertura riusando animateNumber, coerente col resto dell'app (rispetta anche la
+   preferenza "riduci le animazioni" del sistema, gestita già dentro animateNumber stesso). */
+function openWrappedView(){
+  const now = new Date();
+  const curYear = String(now.getFullYear()), prevYear = String(now.getFullYear()-1);
+  const usciteYear = y => DB.movimenti.filter(m=>m.uscite && m.data && m.data.slice(0,4)===y && !isExcludedFromTotals(m));
+  const usciteCur = usciteYear(curYear), usciteePrev = usciteYear(prevYear);
+  const curTotal = usciteCur.reduce((s,m)=>s+m.uscite,0);
+  const prevTotal = usciteePrev.reduce((s,m)=>s+m.uscite,0);
+  const delta = prevTotal>0 ? Math.round((curTotal-prevTotal)/prevTotal*100) : null;
+  const byCat = {}; usciteCur.forEach(m=>{ byCat[m.categoria]=(byCat[m.categoria]||0)+m.uscite; });
+  let topCat=null, topVal=0; Object.entries(byCat).forEach(([c,v])=>{ if(v>topVal){topVal=v; topCat=c;} });
+  const byMonth = {}; usciteCur.forEach(m=>{ const mk=m.data.slice(5,7); byMonth[mk]=(byMonth[mk]||0)+m.uscite; });
+  let topMonth=null, topMonthVal=0; Object.entries(byMonth).forEach(([mk,v])=>{ if(v>topMonthVal){topMonthVal=v; topMonth=mk;} });
+  const txCount = usciteCur.length;
+
+  const slides = [
+    { bg:'linear-gradient(135deg,#123D33,#0C2A22)', label:`Il tuo ${curYear} finora`, id:'wTotal', target: curTotal, fmt:v=>v.toLocaleString('it-IT',{style:'currency',currency:'EUR'}), sub:'spesi in totale' },
+    { bg:'linear-gradient(135deg,#1A2A4A,#0F1830)', label: delta==null ? 'Ancora poco storico per un confronto' : (delta>=0?'Stai spendendo di più':'Stai spendendo di meno'), id:'wDelta', target: delta, fmt:v=>(v>0?'+':'')+Math.round(v)+'%', sub:`rispetto allo stesso periodo del ${prevYear}`, skip: delta==null },
+    { bg:'linear-gradient(135deg,#3A2450,#1E1030)', label:'Categoria regina', id:'wCat', target: topVal, fmt:v=>v.toLocaleString('it-IT',{style:'currency',currency:'EUR'}), sub: topCat ? `${topCat} — la voce che pesa di più` : '', staticLabel: topCat||'—', skip: !topCat },
+    { bg:'linear-gradient(135deg,#4A2A1E,#2A1610)', label:'Il mese più caro', id:'wMonth', target: topMonthVal, fmt:v=>v.toLocaleString('it-IT',{style:'currency',currency:'EUR'}), sub:'', staticLabel: topMonth?monthName(parseInt(topMonth)):'—', skip: !topMonth },
+    { bg:'linear-gradient(135deg,#123D33,#0C2A22)', label:'Movimenti registrati', id:'wTx', target: txCount, fmt:v=>String(Math.round(v)), sub:"uscite tracciate quest'anno" }
+  ].filter(s=>!s.skip);
+
+  const html = `
+    <div class="modal-head"><h3>${ico('sparkle')} Il tuo ${curYear}</h3><button class="close-x" id="wrClose">${ico('x')}</button></div>
+    <div class="modal-body" style="padding-bottom:22px;">
+      <div style="display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; padding:4px 2px 10px;">
+        ${slides.map((s,i)=>`
+          <div class="wrapped-slide" style="scroll-snap-align:center; flex:0 0 250px; height:300px; border-radius:18px; background:${s.bg}; padding:24px; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden; animation-delay:${i*80}ms;">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,.6);">${esc(s.label)}</div>
+            <div>
+              ${s.staticLabel ? `<div class="mono" style="font-size:24px; font-weight:700; color:#fff; letter-spacing:-.02em; line-height:1.15;">${esc(s.staticLabel)}</div><div class="mono" id="${s.id}" style="font-size:17px; font-weight:600; color:rgba(255,255,255,.85); margin-top:4px;">—</div>`
+                       : `<div class="mono" id="${s.id}" style="font-size:36px; font-weight:700; color:#fff; letter-spacing:-.02em; line-height:1.1;">—</div>`}
+              ${s.sub ? `<div style="font-size:12.5px; color:rgba(255,255,255,.65); margin-top:8px;">${esc(s.sub)}</div>` : ''}
+            </div>
+            <div style="position:absolute; bottom:-40px; right:-40px; width:140px; height:140px; border-radius:50%; background:rgba(255,255,255,.05);"></div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="text-align:center; font-size:11.5px; color:var(--text-faint);">← scorri per vedere le altre →</div>
+    </div>
+  `;
+  openModalWide(html);
+  document.getElementById('wrClose').onclick = closeModal;
+  slides.forEach(s=>{
+    const el = document.getElementById(s.id);
+    if(el) animateNumber(el, 0, s.target, s.fmt, 1100);
+  });
+}
+
+
+
 let dashPrevWelfare = null; // rimanenza precedente, per animare anche il KPI Welfare
+let dashPrevTotals = null; // {entrate, uscite, saldo} — usati per animare i KPI da un render all'altro
 function renderDashboard(){
   const years = getYears();  const el = document.getElementById('view-dashboard');
   if(!DB.movimenti.length){
@@ -3484,6 +3698,8 @@ function renderDashboard(){
         <div class="page-sub">Panoramica delle tue finanze personali</div>
       </div>
       <button class="btn btn-sm" id="btnPdfDashboard" title="Genera un riepilogo in PDF">${ico('printer')} Salva PDF</button>
+      <button class="btn btn-sm" id="btnSimulatore" title="Simula come cambierebbe il tuo saldo annuo">${ico('calculator')} Simulatore</button>
+      <button class="btn btn-sm btn-primary" id="btnWrapped" title="Il riepilogo animato del tuo anno">${ico('sparkle')} Il tuo anno</button>
     </div>
 
     <div id="scadenzeBanner"></div>
@@ -3521,6 +3737,7 @@ function renderDashboard(){
         <div class="kpi-label">${ico('activity')} Saldo Periodo</div>
         <div class="kpi-value" id="kpiSaldo">—</div>
         <div id="sparkSaldo"></div>
+        <div id="streakBadge"></div>
       </div>
       <div class="kpi-card risparmio" id="kpiWelfareCard" style="cursor:pointer;" title="Apri lo storico Tessera Welfare">
         <div class="kpi-bar"></div>
@@ -3528,6 +3745,8 @@ function renderDashboard(){
         <div class="kpi-value" id="kpiWelfare">—</div>
       </div>
     </div>
+
+    <div class="card" id="yearAgoWidget" style="margin-bottom:20px;"></div>
 
     <div id="monthlyReportSlot"></div>
 
@@ -3601,6 +3820,8 @@ function renderDashboard(){
     };
   });
   document.getElementById('btnPdfDashboard').onclick = ()=>generatePdfReport('dashboard');
+  document.getElementById('btnSimulatore').onclick = openSimulatoreModal;
+  document.getElementById('btnWrapped').onclick = openWrappedView;
   document.getElementById('kpiWelfareCard').onclick = ()=>openSourceHistoryModal('Tessera Welfare');
 
   updateDashboardData();
@@ -3661,6 +3882,8 @@ function updateDashboardData(){
   kSaldo.className='kpi-value '+saldoClass(saldo);
   animateNumber(kSaldo, prev?prev.saldo:null, saldo);
   dashPrevTotals = {entrate:totEntrate, uscite:totUscite, saldo:saldo};
+  renderStreakBadge();
+  renderYearAgoWidget();
 
   // category breakdown (uscite only) for the period, with sub-breakdown by descrizione
   const catTotals = {};
@@ -8033,10 +8256,11 @@ function renderConfrontoResults(){
 
   html += `<div class="card cmp-detail-card">
     <div class="cmp-chart-head">
-      <div class="section-label" style="margin:0;">${compareChartView==='categoria' ? 'Confronto per categoria' : 'Andamento mensile'}</div>
+      <div class="section-label" style="margin:0;">${compareChartView==='categoria' ? 'Confronto per categoria' : compareChartView==='radar' ? 'Radar comparativo per categoria' : 'Andamento mensile'}</div>
       ${annuale ? `<div class="pill-group" id="compareChartTogglePills">
         <button type="button" class="pill ${compareChartView==='categoria'?'active':''}" data-view="categoria">Per categoria</button>
         <button type="button" class="pill ${compareChartView==='stagionalita'?'active':''}" data-view="stagionalita">Stagionalità</button>
+        <button type="button" class="pill ${compareChartView==='radar'?'active':''}" data-view="radar">Radar</button>
       </div>` : ''}
     </div>`;
 
@@ -8120,6 +8344,28 @@ function renderConfrontoResults(){
     const textColor = isDark ? '#93A3AA' : '#5C6B72';
     if(charts.compareMain) charts.compareMain.destroy();
     const ctx = document.getElementById('chartCompareMain');
+    if(compareChartView==='radar'){
+      // Stessa forma dati della vista "Per categoria" (le top N già calcolate sopra come catLabels),
+      // ma qui la "forma" del periodo conta più del singolo importo: sovrapporre due periodi rende
+      // subito visibile dove uno "si allarga" e l'altro "si stringe" rispetto all'altro.
+      charts.compareMain = new Chart(ctx, {
+        type:'radar',
+        data:{ labels: catLabels, datasets: stats.map((s,i)=>({
+          label: periodLabel(periods[i]),
+          data: catLabels.map(cat=> s.cats[cat] ? s.cats[cat].uscite : 0),
+          borderColor: COMPARE_COLOR_HEX[COMPARE_COLORS[i]],
+          backgroundColor: COMPARE_COLOR_HEX[COMPARE_COLORS[i]]+'2A',
+          pointBackgroundColor: COMPARE_COLOR_HEX[COMPARE_COLORS[i]],
+          borderWidth:2.2, pointRadius:2.5
+        })) },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ labels:{color:textColor, font:{family:'Inter',size:11}, boxWidth:9}, position:'top', align:'end' } },
+          scales:{ r:{ grid:{color:gridColor}, angleLines:{color:gridColor}, pointLabels:{color:textColor, font:{size:10.5}}, ticks:{display:false} } }
+        }
+      });
+      return;
+    }
     const monthLabels = Array.from({length:12},(_,m)=>monthName(m+1).slice(0,3));
     charts.compareMain = new Chart(ctx, {
       type:'line',
@@ -11429,7 +11675,27 @@ const globalSelectObserver = new MutationObserver(mutations=>{
 function init(){
   loadDB();
   applyNavOrder();
-  advanceAutoRenewals();
+  /* ---- Micro-interazione "tilt" 3D discreta sulle KPI card di tutta l'app: un tocco di
+   profondità al passaggio del mouse (rotazione max ~4.5°, volutamente contenuta). Un solo
+   listener delegato sul documento invece che uno per card, così sopravvive ai continui
+   re-render delle viste senza bisogno di essere ricollegato ogni volta. Solo desktop/mouse:
+   sui touch screen il mousemove non arriva se non dopo il tocco, quindi è innocuo. ---- */
+(function setupKpiTilt(){
+  let activeCard = null;
+  function reset(){ if(activeCard){ activeCard.style.transform=''; activeCard=null; } }
+  document.addEventListener('mousemove', e=>{
+    const card = e.target.closest ? e.target.closest('.kpi-card') : null;
+    if(card !== activeCard) reset();
+    if(!card) return;
+    activeCard = card;
+    const r = card.getBoundingClientRect();
+    const px = (e.clientX-r.left)/r.width, py = (e.clientY-r.top)/r.height;
+    const rx = (0.5-py)*4.5, ry = (px-0.5)*4.5;
+    card.style.transform = `perspective(700px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+  });
+  document.addEventListener('mouseleave', reset, true);
+})();
+advanceAutoRenewals();
   supabaseInitOnLoad();
   initDashDefaultPeriod();
   applyTheme(currentTheme());
