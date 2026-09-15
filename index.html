@@ -1133,6 +1133,13 @@ html[data-theme="light"] .import-min-badge{color:#0B3A2E;}
 .sub-scad-left{display:flex; align-items:center; gap:6px; min-width:0;}
 .sub-card-bell{background:none; border:none; cursor:pointer; padding:0; line-height:1; display:inline-flex; flex-shrink:0; color:var(--text-faint);}
 .sub-card-bell.on{color:#E8C24F;}
+/* Badge discreti per le opzioni "Disattiva alla scadenza" / "Aumento di prezzo": una riga sottile
+   sotto la scadenza, visibile solo se almeno una delle due è attiva — niente banner invadenti. */
+.sub-flag-row{display:flex; flex-wrap:wrap; gap:5px; margin-top:7px;}
+.sub-flag{display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:var(--text-faint); background:var(--surface-3); border-radius:20px; padding:3px 8px 3px 6px; line-height:1.3;}
+.sub-flag svg{width:10px; height:10px;}
+.sub-flag.deact{color:var(--coral);}
+.sub-flag.price-up{color:var(--amber);}
 .sub-cat-header{grid-column:1/-1; display:flex; align-items:baseline; justify-content:space-between; padding:0 2px 8px; border-bottom:1px solid var(--border-soft); margin:10px 0 2px;}
 .sub-cat-header:first-child{margin-top:0;}
 .sub-cat-header-name{display:flex; align-items:center; gap:7px; font-size:12px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:.04em;}
@@ -2040,20 +2047,40 @@ function advanceAutoRenewals(){
   const today = new Date(); today.setHours(0,0,0,0);
   let changed = false;
   DB.abbonamenti.forEach(a=>{
-    if(a.rinnovo!=='Automatico' || a.stato!=='Attivo' || !a.scadenza || !a.mesi) return;
+    if(a.stato!=='Attivo' || !a.scadenza) return;
     let dt = new Date(a.scadenza+'T00:00:00');
     if(isNaN(dt)) return;
+    // "Disattiva alla scadenza" vale per qualunque tipo di rinnovo (Automatico o Manuale): se la
+    // scadenza è già passata, l'abbonamento passa a "Non attivo" invece di rinnovarsi.
+    if(dt < today && a.disattivaAllaScadenza){
+      a.stato = 'Non attivo';
+      changed = true;
+      return;
+    }
+    if(a.rinnovo!=='Automatico' || !a.mesi) return;
     let advanced = false;
     while(dt < today){
       dt.setMonth(dt.getMonth()+a.mesi);
       advanced = true;
     }
     if(advanced){
+      if(applyPendingPriceIncrease(a)) changed = true;
       a.scadenza = dt.toISOString().slice(0,10);
       changed = true;
     }
   });
   if(changed) saveDB();
+}
+/* Se è stato programmato un aumento di prezzo (menu abbonamento → "Aumento di prezzo"), lo applica
+   al momento del rinnovo — automatico o manuale — e poi disattiva la programmazione: è un evento
+   singolo legato al prossimo rinnovo, non si ripete da solo su quelli successivi. */
+function applyPendingPriceIncrease(a){
+  if(!a.aumentoPrezzoAttivo || a.aumentoPrezzoNuovo==null) return false;
+  a.costo = a.aumentoPrezzoNuovo;
+  a.costoMensile = a.mesi ? a.aumentoPrezzoNuovo / a.mesi : a.aumentoPrezzoNuovo;
+  a.aumentoPrezzoAttivo = false;
+  a.aumentoPrezzoNuovo = null;
+  return true;
 }
 /* ---- Rinnovo manuale: pulsante "Rinnova" nel menu, avanza la scadenza di un periodo (o più,
    se era rimasta indietro di più cicli) fino a superare la data odierna — stessa logica del rinnovo
@@ -2069,6 +2096,7 @@ function prossimaScadenzaAbbonamento(a){
 function rinnovaAbbonamentoManuale(id){
   const a = DB.abbonamenti.find(x=>x.id===id);
   if(!a || !a.mesi) return;
+  applyPendingPriceIncrease(a);
   a.scadenza = prossimaScadenzaAbbonamento(a);
   saveDB(); toastSuccess('Abbonamento rinnovato — nuova scadenza '+fmtDate(a.scadenza)); renderAbbonamenti();
 }
@@ -2082,6 +2110,38 @@ function abbKebabItems(a){
         rinnovaAbbonamentoManuale(a.id);
       }
     }});
+  }
+  if(a.stato==='Attivo'){
+    items.push({
+      label: a.disattivaAllaScadenza ? 'Annulla "disattiva alla scadenza"' : 'Disattiva alla scadenza',
+      icon: a.disattivaAllaScadenza ? 'checkCircle' : 'x',
+      onClick: ()=>{
+        a.disattivaAllaScadenza = !a.disattivaAllaScadenza;
+        saveDB();
+        toastSuccess(a.disattivaAllaScadenza ? `"${a.servizio}" passerà a Non attivo alla prossima scadenza` : 'Disattivazione automatica annullata');
+        renderAbbonamenti();
+      }
+    });
+    items.push({
+      label: a.aumentoPrezzoAttivo ? 'Modifica aumento di prezzo' : 'Aumento di prezzo',
+      icon: 'arrowUpRight',
+      onClick: async ()=>{
+        const attuale = a.costo!=null ? a.costo.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+        const val = await customPrompt(`Nuovo prezzo di "${a.servizio}" dal prossimo rinnovo (attuale: ${attuale} €)`, a.aumentoPrezzoNuovo!=null ? String(a.aumentoPrezzoNuovo) : (a.costo!=null?String(a.costo):''));
+        if(val===null) return;
+        if(val.trim()===''){
+          if(a.aumentoPrezzoAttivo){
+            a.aumentoPrezzoAttivo = false; a.aumentoPrezzoNuovo = null;
+            saveDB(); toastSuccess('Aumento di prezzo annullato'); renderAbbonamenti();
+          }
+          return;
+        }
+        const num = parseFloat(val.replace(',','.'));
+        if(isNaN(num) || num<0){ toast('Inserisci un importo valido'); return; }
+        a.aumentoPrezzoAttivo = true; a.aumentoPrezzoNuovo = num;
+        saveDB(); toastSuccess(`Al prossimo rinnovo il prezzo passerà a ${num.toLocaleString('it-IT',{style:'currency',currency:'EUR'})}`); renderAbbonamenti();
+      }
+    });
   }
   if(a.link){
     items.push({ label:'Link al sito', icon:'link', onClick:()=>window.open(linkUtiliHref(a.link), '_blank', 'noopener') });
@@ -3335,6 +3395,9 @@ function getYears(){
   return movIndex().years;
 }
 let dashFilter = { anni:[], mesi:[], multi:false };
+// Modalità del grafico "Ripartizione Spese per Categoria": torta (default, com'era) o treemap.
+// Scelta salvata così resta impostata tra una sessione e l'altra.
+let dashCatMode = localStorage.getItem('dash_cat_mode') || 'pie';
 function initDashDefaultPeriod(){
   let latest = null;
   DB.movimenti.forEach(m=>{ if(m.data && (!latest || m.data>latest)) latest = m.data; });
@@ -3474,8 +3537,17 @@ function renderDashboard(){
         <div class="chart-wrap"><canvas id="chartTrend"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-title">Ripartizione Spese per Categoria</div>
-        <div class="chart-wrap"><canvas id="chartCat"></canvas></div>
+        <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+          <span>Ripartizione Spese per Categoria</span>
+          <div class="slim-switch" id="catChartModeSwitch" style="margin:0;">
+            <span class="slim-switch-opt${dashCatMode==='pie'?' active':''}" data-mode="pie">Torta</span>
+            <span class="slim-switch-opt${dashCatMode==='treemap'?' active':''}" data-mode="treemap">Treemap</span>
+          </div>
+        </div>
+        <div class="chart-wrap" id="chartCatWrap">
+          <canvas id="chartCat" style="display:${dashCatMode==='pie'?'block':'none'};"></canvas>
+          <div id="chartCatTreemap" style="display:${dashCatMode==='treemap'?'block':'none'};"></div>
+        </div>
       </div>
     </div>
 
@@ -3518,6 +3590,16 @@ function renderDashboard(){
     };
   });
   document.getElementById('btnMultiToggle').onclick = ()=>{ dashFilter.multi = !dashFilter.multi; syncDashPillsUI(); };
+  document.querySelectorAll('#catChartModeSwitch .slim-switch-opt').forEach(opt=>{
+    opt.onclick = ()=>{
+      if(dashCatMode===opt.dataset.mode) return;
+      dashCatMode = opt.dataset.mode;
+      localStorage.setItem('dash_cat_mode', dashCatMode);
+      document.querySelectorAll('#catChartModeSwitch .slim-switch-opt').forEach(x=>x.classList.remove('active'));
+      opt.classList.add('active');
+      updateDashboardData();
+    };
+  });
   document.getElementById('btnPdfDashboard').onclick = ()=>generatePdfReport('dashboard');
   document.getElementById('kpiWelfareCard').onclick = ()=>openSourceHistoryModal('Tessera Welfare');
 
@@ -3698,8 +3780,20 @@ function updateDashboardData(){
     });
   }
 
-  const sliceOffsets = catEntries.map(()=>8);
   const chartCatEl = document.getElementById('chartCat');
+  const treemapCatEl = document.getElementById('chartCatTreemap');
+  if(dashCatMode==='treemap'){
+    chartCatEl.style.display = 'none';
+    treemapCatEl.style.display = 'block';
+    renderCatTreemap(treemapCatEl, catEntries, (cat, val, evt)=>{
+      const msg = `${cat}: ${val.toLocaleString('it-IT',{style:'currency',currency:'EUR'})}`;
+      showChartValueBubble(msg, evt.clientX, evt.clientY);
+    });
+    return;
+  }
+  treemapCatEl.style.display = 'none';
+  chartCatEl.style.display = 'block';
+  const sliceOffsets = catEntries.map(()=>8);
   // Al tap/click su una fetta mostriamo l'importo con un toast dell'app (coerente con il resto
   // dell'interfaccia), invece di affidarci al tooltip nativo di Chart.js che su alcuni browser
   // mobile mostra un testo poco chiaro al tocco. Ridefinito ad ogni render per non restare
@@ -3916,6 +4010,49 @@ function abbonamentiSottocategorie(catFilter){
 const CATEGORY_COLOR_PALETTE = ['#49D9A8','#5FA8FF','#B592FF','#FF7A66','#F5B95C','#4FC3E8','#E88BD8','#8CE05C','#E8C24F','#7A8CFF','#FF6B9E'];
 /* Palette ampia e indipendente per la personalizzazione manuale del colore delle etichette */
 const ETICHETTA_COLOR_PALETTE = ['#49D9A8','#2FBF8F','#6BDD7A','#8CE05C','#C4E063','#F5D547','#F5B95C','#FF9852','#FF7A66','#FF6B9E','#E88BD8','#D08CF0','#B592FF','#8C7AFF','#7A8CFF','#5FA8FF','#4FC3E8','#4FD6C8','#9AA5B1','#D6D6D6'];
+// Treemap "squarified" semplificata per "Ripartizione Spese per Categoria": alterna split
+// orizzontale/verticale in base al rettangolo corrente, per rettangoli il più possibile
+// leggibili invece di strisce sottili come nello slice-and-dice classico.
+function squarifyCatTreemap(items, x,y,w,h){
+  if(!items.length) return [];
+  if(items.length===1) return [{...items[0], x,y,w,h}];
+  const total = items.reduce((s,i)=>s+i.value,0);
+  let acc=0, splitIdx=0;
+  for(let i=0;i<items.length;i++){ acc+=items[i].value; if(acc>=total/2){ splitIdx=Math.max(1,i+1); break; } }
+  const groupA = items.slice(0,splitIdx), groupB = items.slice(splitIdx);
+  const fracA = groupA.reduce((s,i)=>s+i.value,0)/total;
+  if(w>=h){
+    const wA = w*fracA;
+    return [...squarifyCatTreemap(groupA, x,y,wA,h), ...squarifyCatTreemap(groupB, x+wA,y,w-wA,h)];
+  }else{
+    const hA = h*fracA;
+    return [...squarifyCatTreemap(groupA, x,y,w,hA), ...squarifyCatTreemap(groupB, x,y+hA,w,h-hA)];
+  }
+}
+function renderCatTreemap(container, catEntries, onSliceClick){
+  const W = Math.max(280, container.clientWidth||520), H = 260;
+  if(!catEntries.length){
+    container.innerHTML = `<div class="empty-state" style="padding:24px;">Nessuna spesa nel periodo selezionato</div>`;
+    return;
+  }
+  const items = catEntries.map(([name,value])=>({ name, value, color: categoryColor(name) }));
+  const rects = squarifyCatTreemap(items, 0,0,W,H);
+  container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:${H}px;">
+    ${rects.map(r=>`
+      <g class="cat-tm-rect" data-cat="${esc(r.name)}" data-val="${r.value}" style="cursor:pointer;">
+        <rect x="${r.x+1}" y="${r.y+1}" width="${Math.max(0,r.w-2)}" height="${Math.max(0,r.h-2)}" fill="${r.color}" opacity=".85" rx="4"/>
+        ${r.w>54 && r.h>24 ? `<text x="${r.x+9}" y="${r.y+19}" font-size="11.5" font-weight="700" fill="#0E1316">${esc(r.name.length>16?r.name.slice(0,15)+'…':r.name)}</text>` : ''}
+        ${r.w>64 && r.h>40 ? `<text x="${r.x+9}" y="${r.y+35}" font-size="10.5" fill="#0E1316" opacity=".75">${esc(r.value.toLocaleString('it-IT',{style:'currency',currency:'EUR'}))}</text>` : ''}
+        <title>${esc(r.name)}: ${esc(r.value.toLocaleString('it-IT',{style:'currency',currency:'EUR'}))}</title>
+      </g>
+    `).join('')}
+  </svg>`;
+  if(onSliceClick){
+    container.querySelectorAll('.cat-tm-rect').forEach(g=>{
+      g.addEventListener('click', e=>onSliceClick(g.dataset.cat, parseFloat(g.dataset.val), e));
+    });
+  }
+}
 function categoryColor(cat){
   if(DB.categorieColori && DB.categorieColori[cat]) return DB.categorieColori[cat];
   let idx = DB.categorieUscite.indexOf(cat);
@@ -4823,6 +4960,17 @@ function setupImportoKeypad(){
     const kv = document.getElementById('importoKeypadValue');
     if(kv) kv.textContent = display.textContent;
   };
+  // Usato per precompilare l'importo (es. prezzo di un abbonamento) mantenendo il tastierino
+  // sincronizzato: senza questo, il tastierino ripartirebbe da 0 al primo tocco ignorando il
+  // valore precompilato.
+  input._importoKeypadSetValue = (val)=>{
+    const n = Math.max(0, parseFloat(val)||0);
+    const [ip, dp] = n.toFixed(2).split('.');
+    intDigits = String(parseInt(ip,10)); decDigits = dp; hasComma = true; freshStart = false;
+    render();
+    const kv = document.getElementById('importoKeypadValue');
+    if(kv) kv.textContent = display.textContent;
+  };
   if(!importoKeypadEl){
     importoKeypadEl = document.createElement('div');
     importoKeypadEl.className = 'importo-keypad-backdrop';
@@ -5065,14 +5213,37 @@ function openMovModal(id, onSaved, duplicateFrom){
       row.style.display = 'none';
     }
   }
-  document.getElementById('mCategoria').onchange = ()=>{ refreshDescOptions(); refreshUtenzaRow(); };
-  document.getElementById('mDescrizione').addEventListener('change', refreshUtenzaRow);
+  // Se la categoria è Abbonamenti e il dettaglio scelto corrisponde a un abbonamento esistente,
+  // precompila l'importo col suo prezzo attuale — solo se il campo è ancora vuoto, per non
+  // sovrascrivere un importo che l'utente ha già digitato (es. importo diverso dal solito, o
+  // modifica di un movimento già salvato).
+  function refreshAbbonamentoImporto(){
+    const cat = document.getElementById('mCategoria').value;
+    const det = document.getElementById('mDescrizione').value;
+    const importoInput = document.getElementById('mImporto');
+    if(cat!=='Abbonamenti' || !det || !importoInput) return;
+    // "Intoccato" = vuoto, oppure ancora uguale all'ultimo valore che avevamo precompilato noi:
+    // così passare da un abbonamento all'altro aggiorna sempre l'importo, ma un valore digitato
+    // a mano dall'utente non viene mai sovrascritto.
+    const cur = importoInput.value;
+    const untouched = !cur || cur === importoInput.dataset.autofilled;
+    if(!untouched) return;
+    const sub = DB.abbonamenti.find(x=>x.servizio===det);
+    if(!sub || sub.costo==null) return;
+    const val = Math.round(sub.costo*100)/100;
+    importoInput.dataset.autofilled = String(val);
+    if(importoInput._importoKeypadSetValue) importoInput._importoKeypadSetValue(val);
+    else { importoInput.value = String(val); importoInput.dispatchEvent(new Event('input', {bubbles:true})); }
+  }
+  document.getElementById('mCategoria').onchange = ()=>{ refreshDescOptions(); refreshUtenzaRow(); refreshAbbonamentoImporto(); };
+  document.getElementById('mDescrizione').addEventListener('change', ()=>{ refreshUtenzaRow(); refreshAbbonamentoImporto(); });
   document.getElementById('mImporto').addEventListener('input', refreshRimborsoMismatch);
   curIsRimborso && (document.getElementById('mIsRimborso').checked = true);
   refreshRimborsoRowsVisibility();
   renderRimborsoDiRows();
   refreshCatOptions();
   refreshUtenzaRow();
+  refreshAbbonamentoImporto();
   // "Conto corrente" è sempre la prima opzione e quella selezionata di default (nessuna icona associata).
   const metodoSel = document.getElementById('mMetodoPagamento');
   const metodoOptions = ['Conto corrente', ...DB.metodiPagamento.filter(m=>m!=='Conto corrente')];
@@ -8381,6 +8552,10 @@ function renderSubList(animate){
           </span>
           ${countdownBadge(a.scadenza, a.stato==='Attivo'?'Scadenza non impostata':'Non attivo')}
         </div>
+        ${(a.disattivaAllaScadenza || a.aumentoPrezzoAttivo) ? `<div class="sub-flag-row">
+          ${a.disattivaAllaScadenza ? `<span class="sub-flag deact" title="Passerà automaticamente a &quot;Non attivo&quot; quando scade">${ico('x',10)} Si disattiva a scadenza</span>` : ''}
+          ${a.aumentoPrezzoAttivo ? `<span class="sub-flag price-up" title="Il prezzo cambierà al prossimo rinnovo">${ico('arrowUpRight',10)} Nuovo prezzo: ${fmtEUR(a.aumentoPrezzoNuovo)}</span>` : ''}
+        </div>` : ''}
       </div>`;
     }).join('') || `<div class="empty-state">Nessun abbonamento registrato.</div>`;
     container.innerHTML = `<div class="sub-grid" id="subGrid">${cardsHtml}</div>`;
