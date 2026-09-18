@@ -477,11 +477,6 @@ html[data-theme="light"] .kpi-card:hover::after{box-shadow:inset 0 0 0 1px rgba(
 .dash-widget > .card-title{flex:0 0 auto;}
 .dash-widget > .chart-wrap{flex:1; min-height:0; height:auto;}
 #monthlyAvgWidget, #budgetBatteryWidget, #thermoGoalWidget, #heatmapWidget{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; overflow:hidden;}
-/* A differenza degli altri (un unico blocco da centrare), il Podio ha un titolo fisso in alto e
-   una riga di colonne sotto: qui il centraggio verticale va applicato solo alla riga, non
-   all'insieme, altrimenti con poco spazio il blocco intero trabocca sopra e sotto e il titolo
-   viene tagliato. */
-#podiumWidget{flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;}
 .dash-widget.dw-kpi{display:block; min-width:190px; min-height:104px;}
 .dash-widget.dragging-free{opacity:.85; box-shadow:0 16px 36px rgba(0,0,0,.4); z-index:50; cursor:grabbing;}
 /* Trascinamento e ridimensionamento dei widget solo su desktop: su mobile (stesso breakpoint usato
@@ -3571,41 +3566,6 @@ function renderStreakBadge(){
 /* ---- Medie mensili: guadagno, spesa e risparmio medi (ultimi 12 mesi), ciascuno con un
    indicatore che confronta il mese scorso (l'ultimo mese concluso) con quella media — per capire
    se il mese appena chiuso è stato sopra o sotto il tuo solito, non solo qual è il "solito". ---- */
-// Trova il mese più recente che ha almeno una spesa registrata, risalendo fino a 12 mesi
-// indietro: usato dai widget "del mese" così non restano vuoti a inizio mese.
-function latestMonthWithUscite(){
-  const today = new Date();
-  for(let i=0;i<12;i++){
-    const d = new Date(today.getFullYear(), today.getMonth()-i, 1);
-    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    if(DB.movimenti.some(m=>m.uscite && m.data && m.data.slice(0,7)===k && !isExcludedFromTotals(m))) return k;
-  }
-  return `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-}
-/* ---- Podio del mese: le 3 spese singole più alte del mese più recente con dati. ---- */
-function renderPodiumWidget(){
-  const el = document.getElementById('podiumWidget');
-  if(!el) return;
-  const curM = latestMonthWithUscite();
-  const rows = DB.movimenti.filter(m=>m.uscite && m.data && m.data.slice(0,7)===curM && !isExcludedFromTotals(m)).sort((a,b)=>b.uscite-a.uscite).slice(0,3);
-  if(!rows.length){ el.style.display='none'; return; }
-  el.style.display='';
-  const relH = [70,100,52]; // altezza relativa delle barre (percentuale, non più px fissi: così si adattano anche a card molto basse)
-  const order = [1,0,2];
-  el.innerHTML = `
-    <div class="card-title" style="margin-bottom:8px; flex:0 0 auto;">Podio delle spese del mese</div>
-    <div style="flex:1; min-height:0; display:flex; align-items:flex-end; justify-content:center; gap:6px;">
-      ${order.map(idx=>{
-        const r = rows[idx];
-        if(!r) return '<div style="flex:1; max-width:100px;"></div>';
-        return `<div style="text-align:center; flex:1; min-width:0; max-width:100px; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center;">
-          <div style="font-size:10.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; flex:0 0 auto;">${esc(r.descrizione||r.categoria)}</div>
-          <div class="mono" style="font-size:11px; margin-bottom:4px; flex:0 0 auto;">${fmtEUR(r.uscite)}</div>
-          <div style="width:100%; height:${relH[idx]}%; max-height:100%; min-height:14px; background:${idx===0?'#F5B95C':idx===1?'#C7C7C7':'#B87333'}; border-radius:6px 6px 0 0; display:flex; align-items:flex-start; justify-content:center; padding-top:4px; font-weight:800; font-size:13px; color:#0E1316; flex:0 0 auto; box-sizing:border-box;">${idx+1}</div>
-        </div>`;
-      }).join('')}
-    </div>`;
-}
 
 function renderMonthlyAvgWidget(){
   const el = document.getElementById('monthlyAvgWidget');
@@ -3883,12 +3843,11 @@ let dashPrevTotals = null; // {entrate, uscite, saldo} — usati per animare i K
    Il ridimensionamento usa il resize nativo del browser (CSS resize:both, angolo in basso a
    destra); dimensioni e posizione si salvano in localStorage, per dispositivo. */
 const DASH_LAYOUT_KEY = 'dash_widget_layout_v2';
-const DASH_WIDGET_DEFAULT_ORDER = ['kpi-entrate','kpi-uscite','kpi-saldo','kpi-welfare','monthlyAvg','trend','podium',
+const DASH_WIDGET_DEFAULT_ORDER = ['kpi-entrate','kpi-uscite','kpi-saldo','kpi-welfare','monthlyAvg','trend',
   'botTelegram','catDetailPair','budget503020','subImpact'];
 const DASH_WIDGET_DEFAULT_SIZES = {
   'kpi-entrate':{w:250,h:126}, 'kpi-uscite':{w:250,h:126}, 'kpi-saldo':{w:250,h:126}, 'kpi-welfare':{w:250,h:126},
   monthlyAvg:{w:560,h:126}, trend:{w:480,h:320},
-  podium:{w:320,h:220},
   botTelegram:{w:280,h:126}, catDetailPair:{w:440,h:360}, budget503020:{w:340,h:300}, subImpact:{w:380,h:180}
 };
 const DASH_SNAP_THRESHOLD = 14; // px entro cui due bordi si "agganciano"
@@ -4219,10 +4178,6 @@ function renderDashboard(){
         <div class="card-title">Andamento Entrate / Uscite</div>
         <div class="chart-wrap"><canvas id="chartTrend"></canvas></div>
       </div>
-      <div class="dash-widget card" data-wid="podium" draggable="false" style="width:320px; height:220px; min-width:170px; min-height:120px;">
-        <span class="dash-widget-handle" title="Trascina per riordinare">⠿</span>
-        <div id="podiumWidget" style="height:100%;"></div>
-      </div>
 
       <div class="dash-widget dw-kpi kpi-card" data-wid="botTelegram" draggable="false" style="width:280px; height:126px; min-width:130px; min-height:70px;">
         <span class="dash-widget-handle" title="Trascina per riordinare">⠿</span>
@@ -4337,7 +4292,6 @@ function updateDashboardData(){
   dashPrevTotals = {entrate:totEntrate, uscite:totUscite, saldo:saldo};
   renderStreakBadge();
   renderMonthlyAvgWidget();
-  renderPodiumWidget();
   renderBotTelegramWidget();
   renderCatDetailPairWidget();
   renderBudget503020Widget();
@@ -8958,7 +8912,7 @@ function renderSubImpactWidget(){
     const totUscite = DB.movimenti.reduce((s,m)=>(m.uscite && m.data && m.data.slice(0,4)===curYear && !isExcludedFromTotals(m)) ? s+m.uscite : s, 0);
     const pct = totUscite>0 ? (annual/totUscite*100) : 0;
     document.getElementById('subImpactResult').innerHTML = `
-      <div class="mono" style="font-size:20px; font-weight:700; color:var(--coral); line-height:1.15; overflow-wrap:break-word;">${fmtEUR(annual)}</div>
+      <div class="mono" style="font-size:20px; font-weight:700; color:var(--coral); line-height:1.15; overflow-wrap:break-word; margin-top:16px;">${fmtEUR(annual)}</div>
       <div style="font-size:11.5px; color:var(--text-dim); margin-top:4px;">all'anno, ${fmtEUR(monthly)}/mese — circa il <b>${pct.toFixed(1)}%</b> della tua spesa annuale totale.</div>
     `;
   }
