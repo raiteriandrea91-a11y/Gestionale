@@ -476,7 +476,12 @@ html[data-theme="light"] .kpi-card:hover::after{box-shadow:inset 0 0 0 1px rgba(
    compatto, il resto del contenuto si allarga a riempire lo spazio restante. */
 .dash-widget > .card-title{flex:0 0 auto;}
 .dash-widget > .chart-wrap{flex:1; min-height:0; height:auto;}
-#monthlyAvgWidget, #budgetBatteryWidget, #podiumWidget, #thermoGoalWidget, #heatmapWidget{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; overflow:hidden;}
+#monthlyAvgWidget, #budgetBatteryWidget, #thermoGoalWidget, #heatmapWidget{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; overflow:hidden;}
+/* A differenza degli altri (un unico blocco da centrare), il Podio ha un titolo fisso in alto e
+   una riga di colonne sotto: qui il centraggio verticale va applicato solo alla riga, non
+   all'insieme, altrimenti con poco spazio il blocco intero trabocca sopra e sotto e il titolo
+   viene tagliato. */
+#podiumWidget{flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;}
 .dash-widget.dw-kpi{display:block; min-width:190px; min-height:104px;}
 .dash-widget.dragging-free{opacity:.85; box-shadow:0 16px 36px rgba(0,0,0,.4); z-index:50; cursor:grabbing;}
 /* Trascinamento e ridimensionamento dei widget solo su desktop: su mobile (stesso breakpoint usato
@@ -4238,7 +4243,7 @@ function renderDashboard(){
 
       <div class="dash-widget card" data-wid="subImpact" draggable="false" style="width:380px; height:180px; min-width:200px; min-height:110px;">
         <span class="dash-widget-handle" title="Trascina per riordinare">⠿</span>
-        <div id="subImpactWidget" style="height:100%; overflow:auto;"></div>
+        <div id="subImpactWidget" style="height:100%; overflow:auto; display:flex; flex-direction:column;"></div>
       </div>
     </div>
   `;
@@ -8942,7 +8947,7 @@ function renderSubImpactWidget(){
     <select id="subImpactSel" style="width:100%; box-sizing:border-box; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); font-family:inherit; margin-bottom:12px; flex:0 0 auto;">
       ${abb.map(a=>`<option value="${esc(a.servizio)}">${esc(a.servizio)}</option>`).join('')}
     </select>
-    <div id="subImpactResult" style="flex:1; min-height:0;"></div>
+    <div id="subImpactResult" style="flex:1; min-height:0; display:flex; flex-direction:column; justify-content:flex-end;"></div>
   `;
   function draw(){
     const name = document.getElementById('subImpactSel').value;
