@@ -486,7 +486,6 @@ html[data-theme="light"] .kpi-card:hover::after{box-shadow:inset 0 0 0 1px rgba(
   #dashWidgetGrid{height:auto !important;}
   .dash-widget{position:static !important; resize:none !important; width:100% !important; height:auto !important; margin-bottom:14px;}
   .dash-widget-handle{display:none !important;}
-  .dash-widget-resettable{display:none !important;}
 }
 /* Linee guida di allineamento che appaiono quando un bordo trascinato è vicino al bordo di un
    altro widget (o del contenitore) — una verticale per l'asse X, una orizzontale per l'asse Y.
@@ -497,7 +496,6 @@ html[data-theme="light"] .kpi-card:hover::after{box-shadow:inset 0 0 0 1px rgba(
 .dash-widget:hover .dash-widget-handle{opacity:1;}
 .dash-widget-handle:hover{background:var(--surface-3); color:var(--text);}
 .dash-widget-handle:active{cursor:grabbing;}
-#dashResetLayout{margin-left:auto;}
 /* Badge streak (mesi sotto media) accanto al Saldo Periodo: piccolo, discreto, appare solo se c'è una serie in corso. */
 .streak-pill{display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--text-dim); margin-top:6px;}
 .kpi-label{font-size:11.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; font-weight:600; display:flex; align-items:center; gap:6px;}
@@ -574,6 +572,11 @@ html[data-theme="light"] .kpi-card:hover::after{box-shadow:inset 0 0 0 1px rgba(
 .month-tile{background:none; border:none; color:var(--text-dim); padding:7px 2px; border-radius:11px; font-size:11.5px; font-weight:600; cursor:pointer; text-align:center; transition:all .15s; user-select:none;}
 .month-tile:hover{color:var(--text);}
 .month-tile.active{background:var(--surface-3); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.15); font-weight:700;}
+/* Filtro Anni/Mesi della Dashboard: su desktop, Anni e Mesi stanno affiancati sulla stessa riga
+   (invece che impilati) per occupare lo spazio orizzontale altrimenti vuoto accanto agli anni; su
+   mobile (media query più sotto) i Mesi tornano a capo su una riga propria. */
+.time-selector-dash .time-selector-row.dash-time-row{flex-wrap:wrap; row-gap:14px; column-gap:24px;}
+.dash-time-group{display:flex; align-items:center; gap:10px;}
 .icon-toggle-btn{position:relative; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; width:34px; height:34px; background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim); border-radius:8px; cursor:pointer; transition:all .15s;}
 .icon-toggle-btn svg{width:16px; height:16px; display:block;}
 .icon-toggle-btn:hover{border-color:var(--text-faint); color:var(--text); background:var(--surface-3);}
@@ -1686,6 +1689,10 @@ th.src-col, td.src-col{width:26px; text-align:center; padding-left:0; padding-ri
   .month-tile{border:none; background:none; padding:10px 2px; border-radius:11px; font-weight:600;}
   .month-tile.active{background:var(--surface-3); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.15); font-weight:700;}
   .month-grid{background:var(--surface-2); border-radius:14px; padding:3px;}
+  /* Dashboard: su mobile Anni e Mesi non stanno più affiancati (schermo troppo stretto), i Mesi
+     tornano a capo su una riga propria a piena larghezza, come nel layout impilato originale. */
+  .time-selector-dash .time-selector-row.dash-time-row{flex-wrap:wrap !important;}
+  .dash-time-months{flex:1 1 100%;}
   /* Riga "Rapidi" (prima riga di ogni colonna filtri): non va mai a capo, restando sempre su una
      riga sola anche su mobile. Il pulsante di selezione multipla resta di dimensione fissa. */
   .time-selector-row:first-child{flex-wrap:nowrap; align-items:center;}
@@ -4056,7 +4063,7 @@ function initWidgetGrid(gridId, layoutKey, defaultOrder, defaultSizes, resetBtnI
   };
 }
 function initDashWidgetGrid(){
-  initWidgetGrid('dashWidgetGrid', DASH_LAYOUT_KEY, DASH_WIDGET_DEFAULT_ORDER, DASH_WIDGET_DEFAULT_SIZES, 'dashResetLayout');
+  initWidgetGrid('dashWidgetGrid', DASH_LAYOUT_KEY, DASH_WIDGET_DEFAULT_ORDER, DASH_WIDGET_DEFAULT_SIZES, null);
 }
 /* Calcola a quale coordinata X il widget trascinato dovrebbe agganciarsi (bordo sinistro o
    destro allineato al bordo sinistro/destro di un altro widget, o al bordo del contenitore).
@@ -4136,25 +4143,23 @@ function renderDashboard(){
     <div id="scadenzeBanner"></div>
 
     <div class="time-selector time-selector-dash">
-      <div class="time-selector-row">
-        <span class="time-selector-label">Anni</span>
-        <div class="pill-group" id="yearPills">
-          ${years.map(y=>`<button type="button" class="pill ${dashFilter.anni.includes(y)?'active':''}" data-year="${y}">${y}</button>`).join('')}
+      <div class="time-selector-row dash-time-row">
+        <div class="dash-time-group dash-time-years">
+          <span class="time-selector-label">Anni</span>
+          <div class="pill-group" id="yearPills">
+            ${years.map(y=>`<button type="button" class="pill ${dashFilter.anni.includes(y)?'active':''}" data-year="${y}">${y}</button>`).join('')}
+          </div>
+        </div>
+        <div class="dash-time-group dash-time-months">
+          <span class="time-selector-label">Mesi</span>
+          <div class="month-grid" id="monthGrid">
+            ${Array.from({length:12},(_,i)=>i+1).map(m=>`<button type="button" class="month-tile ${dashFilter.mesi.includes(String(m))?'active':''}" data-month="${m}" title="${monthName(m)}">${monthName(m).slice(0,3)}</button>`).join('')}
+          </div>
         </div>
         <button type="button" class="icon-toggle-btn ${dashFilter.multi?'active':''}" id="btnMultiToggle" style="margin-left:auto;" data-tooltip="${dashFilter.multi?'Selezione multipla attiva':'Attiva selezione multipla di anni e mesi'}" aria-label="Attiva/disattiva la selezione multipla di anni e mesi">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
         </button>
       </div>
-      <div class="time-selector-row">
-        <span class="time-selector-label">Mesi</span>
-        <div class="month-grid" id="monthGrid">
-          ${Array.from({length:12},(_,i)=>i+1).map(m=>`<button type="button" class="month-tile ${dashFilter.mesi.includes(String(m))?'active':''}" data-month="${m}" title="${monthName(m)}">${monthName(m).slice(0,3)}</button>`).join('')}
-        </div>
-      </div>
-    </div>
-
-    <div style="display:flex; align-items:center; margin-bottom:10px;">
-      <button class="btn btn-sm dash-widget-resettable" id="dashResetLayout" title="Riporta le card alla disposizione e alle dimensioni originali">${ico('rotateCcw')} Reimposta disposizione</button>
     </div>
 
     <div id="monthlyReportSlot"></div>
