@@ -2542,12 +2542,17 @@ function movimentoMetodoEffettivo(m){
     if(m.fonteImport==='paypal_confirmato') nome = 'PayPal';
     else if(m.fonteImport==='revolut') nome = 'Revolut';
   }
-  // Il bot Telegram scrive "Contanti" sui movimenti che registra: nell'app il metodo ufficiale che
-  // rappresenta i contanti è "Bancomat/Contanti", quindi va equiparato qui — un unico punto di
-  // normalizzazione da cui dipendono icone, filtri per metodo e il widget "Registrati dal bot".
-  if(nome==='Contanti') nome = 'Bancomat/Contanti';
   if(!nome || !DB.metodiPagamento.includes(nome)) return null;
   return nome;
+}
+// Nome ATTUALE, tra i metodi di pagamento esistenti, di quello usato dal bot Telegram per
+// registrare i movimenti (es. "Contanti", ma potresti averlo chiamato altrimenti dalle
+// Impostazioni: rinominare un metodo lì non tocca i movimenti già registrati, quindi un confronto
+// con una stringa fissa si romperebbe al primo cambio di nome). Cerchiamo quindi, tra i metodi
+// attuali, quello il cui nome contiene "contant(i)" indipendentemente da maiuscole/accenti/spazi —
+// la sostanza del metodo, non l'etichetta esatta che gli hai dato.
+function botMetodoNome(){
+  return (DB.metodiPagamento||[]).find(nome => normalizeMatch(nome).includes('contant')) || null;
 }
 // Icona cliccabile (apre lo storico movimenti di quel metodo) da usare nella colonna "src-col" delle liste.
 function movimentoMetodoIconHtml(m){
@@ -3611,15 +3616,19 @@ function renderMonthlyAvgWidget(){
 
 
 
-/* ---- Movimenti registrati dal bot Telegram: stima dal metodo di pagamento "Bancomat/Contanti",
-   che il bot imposta sempre sulle voci che registra (non esiste un marcatore dedicato separato:
-   se in futuro il bot scrive un campo più specifico, è qui che va aggiornato il filtro). ---- */
+/* ---- Movimenti registrati dal bot Telegram: stima dal metodo di pagamento che il bot usa sempre
+   per registrare le voci (di fatto "Contanti", ma il nome esatto è quello attualmente presente
+   nell'elenco metodi di pagamento dell'utente: rinominare un metodo dalle Impostazioni non tocca i
+   movimenti già salvati, quindi confrontare con una stringa fissa si romperebbe al primo cambio di
+   nome — botMetodoNome() lo individua dinamicamente cercando "contant" nell'elenco attuale; se in
+   futuro il bot scrive un campo più specifico, è qui che va aggiornato il filtro). ---- */
 function renderBotTelegramWidget(){
   const el = document.getElementById('botTelegramWidget');
   if(!el) return;
   const today = new Date();
   const curKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-  const rows = movimentiForTotals(DB.movimenti).filter(m=>m.data && m.data.slice(0,7)===curKey && movimentoMetodoEffettivo(m)==='Bancomat/Contanti');
+  const botMetodo = botMetodoNome();
+  const rows = movimentiForTotals(DB.movimenti).filter(m=>m.data && m.data.slice(0,7)===curKey && botMetodo && movimentoMetodoEffettivo(m)===botMetodo);
   const tot = rows.reduce((s,m)=>s+(m.uscite||m.entrate||0),0);
   el.innerHTML = `<div class="kpi-value">${rows.length}</div><div class="kpi-sub" style="font-size:11px; color:var(--text-faint); margin-top:4px;">${fmtEUR(tot)} in contanti questo mese</div>`;
 }
