@@ -2542,6 +2542,10 @@ function movimentoMetodoEffettivo(m){
     if(m.fonteImport==='paypal_confirmato') nome = 'PayPal';
     else if(m.fonteImport==='revolut') nome = 'Revolut';
   }
+  // Il bot Telegram scrive "Contanti" sui movimenti che registra: nell'app il metodo ufficiale che
+  // rappresenta i contanti è "Bancomat/Contanti", quindi va equiparato qui — un unico punto di
+  // normalizzazione da cui dipendono icone, filtri per metodo e il widget "Registrati dal bot".
+  if(nome==='Contanti') nome = 'Bancomat/Contanti';
   if(!nome || !DB.metodiPagamento.includes(nome)) return null;
   return nome;
 }
