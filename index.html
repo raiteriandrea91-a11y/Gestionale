@@ -1776,7 +1776,9 @@ th.src-col, td.src-col{width:26px; text-align:center; padding-left:0; padding-ri
 
   <main id="mainContent">
     <div class="mobile-topbar" id="mobileTopbar">
-      <div class="mobile-topbar-pill mobile-topbar-left"></div>
+      <div class="mobile-topbar-pill mobile-topbar-left">
+        <button type="button" class="mobile-topbar-btn" id="mobileTopbarPrivacyBtn" title="Modalità Privacy" aria-label="Attiva/disattiva Modalità Privacy"><span id="mobileTopbarPrivacyIcon"></span></button>
+      </div>
       <div class="mobile-topbar-title" id="mobileTopbarTitle">Dashboard</div>
       <div class="mobile-topbar-pill mobile-topbar-right" id="mobileTopbarActions"></div>
     </div>
@@ -2715,6 +2717,9 @@ function updatePrivacyIcon(){
   const on = privacyOn();
   const a = document.getElementById('privacyIcon'); if(a) a.innerHTML = ico(on?'eyeOff':'eye');
   const btn = document.getElementById('sidebarPrivacyBtn'); if(btn) btn.title = on ? 'Disattiva Modalità Privacy' : 'Attiva Modalità Privacy';
+  // Icona sempre visibile nell'angolo in alto a sinistra su mobile (pillola sinistra della topbar).
+  const mIcon = document.getElementById('mobileTopbarPrivacyIcon'); if(mIcon) mIcon.innerHTML = ico(on?'eyeOff':'eye', 18);
+  const mBtn = document.getElementById('mobileTopbarPrivacyBtn'); if(mBtn) mBtn.title = on ? 'Disattiva Modalità Privacy' : 'Attiva Modalità Privacy';
 }
 function togglePrivacyQuick(){
   applyPrivacy(!privacyOn());
@@ -11950,6 +11955,7 @@ advanceAutoRenewals();
   };
   document.getElementById('sidebarThemeBtn').onclick = toggleThemeQuick;
   document.getElementById('sidebarPrivacyBtn').onclick = togglePrivacyQuick;
+  document.getElementById('mobileTopbarPrivacyBtn').onclick = togglePrivacyQuick;
   document.getElementById('overlay').onclick = closeSidebarMobile;
   let backdropMouseDownOnSelf = false;
   document.getElementById('modalBackdrop').addEventListener('mousedown', (e)=>{
