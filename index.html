@@ -147,6 +147,16 @@ html[data-theme="light"] .rimborso-chip.checked{background:var(--money-pos-dim);
   cursor:pointer; vertical-align:middle; transition:.15s;}
 .mov-link-btn:hover{background:var(--surface-2); color:var(--mint);}
 .mov-row-extra-line .mov-link-btn{margin-left:0; padding:2px 4px;}
+/* Icona "rimborso parziale" sulla spesa: discreta, ambra come gli altri avvisi; tooltip al passaggio
+   (desktop) e bolla al click (anche mobile, vedi listener delegato in init) */
+.rimb-parz-btn{position:relative; display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; margin-left:6px;
+  border:none; background:rgba(245,185,92,.14); color:var(--amber); border-radius:50%; cursor:pointer; vertical-align:middle; padding:0; flex-shrink:0;}
+.rimb-parz-btn:hover{background:rgba(245,185,92,.26);}
+.rimb-parz-btn::after{content:attr(data-tip); position:absolute; bottom:calc(100% + 7px); left:50%; transform:translateX(-50%) translateY(4px);
+  background:var(--surface-3); color:var(--text); border:1px solid var(--border); box-shadow:var(--shadow); padding:6px 10px; border-radius:7px;
+  font-size:11.5px; font-weight:500; white-space:nowrap; text-transform:none; letter-spacing:normal; opacity:0; pointer-events:none;
+  transition:opacity .15s ease, transform .15s ease; z-index:80;}
+@media(hover:hover){ .rimb-parz-btn:hover::after{opacity:1; transform:translateX(-50%) translateY(0);} }
 /* Popup "Spese collegate" (openLinkedSpeseModal) quando un rimborso copre più di una spesa */
 .linked-spesa-row{display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer; text-align:left; transition:border-color .15s;}
 .linked-spesa-row:last-child{margin-bottom:0;}
@@ -5031,6 +5041,12 @@ function findRimborsoIdFor(uscitaId){
 // coperta). opts.compact: solo icona (tabelle desktop) — altrimenti icona + testo (righe mobile).
 function rimborsoLinkBtnHtml(m, opts){
   opts = opts || {};
+  // Nelle tabelle (compact) l'icona di copertura parziale accompagna il link al rimborso; nelle
+  // righe mobile compare invece accanto al titolo (vedi dayGroupsHtml), sempre visibile.
+  if(opts.compact && !opts.noParz && m.uscite){
+    const parz = rimborsoParzialeIconHtml(m);
+    if(parz) return parz + rimborsoLinkBtnHtml(m, {compact:true, noParz:true});
+  }
   const linkedIds = (m.rimborsoSpesa && Array.isArray(m.rimborsoDiIds)) ? m.rimborsoDiIds : [];
   if(linkedIds.length===1){
     return opts.compact
@@ -5076,7 +5092,7 @@ function dayGroupsHtml(rows, opts){
         <div class="mov-row-content">
           ${movRowAvatarHtml(m.categoria)}
           <div class="mov-row-mid">
-            <div class="mov-row-title">${esc(m.descrizione||m.categoria||'—')}</div>
+            <div class="mov-row-title">${esc(m.descrizione||m.categoria||'—')}${rimborsoParzialeIconHtml(m)}</div>
             <div class="mov-row-sub">${esc(m.categoria||'—')}${m.note?`<span class="mov-row-note-ic" title="Ha una nota">${ico('fileText',11)}</span>`:''}</div>
           </div>
           <div class="mov-row-amt ${isNeg?'neg':'pos'}">${isNeg?'-':'+'}${fmtEUR(amt)}</div>
@@ -5360,21 +5376,65 @@ function wireCategoriaDettaglioFields(catSelId, descSelId, getTipo, editing, opt
   }
   return { refreshCatOptions, refreshDescOptions, refreshDescLabel };
 }
-/* Etichetta puramente visiva (nessun effetto sui totali, gestiti dal netting in movimentiForTotals)
-   applicata automaticamente sull'uscita collegata quando si registra un rimborso ad essa legato. */
-function applyRimborsatoTag(uscitaId){
+/* ---- Copertura di una spesa da parte dei rimborsi collegati ----
+   Somma la quota di ogni rimborso (entrata con rimborsoSpesa) che punta a questa spesa. Se un singolo
+   rimborso è collegato a più spese contemporaneamente, non esiste un campo che salvi la suddivisione
+   esplicita: il suo importo viene quindi ripartito tra le spese collegate in proporzione al loro importo.
+   excludeId (opzionale) ignora un rimborso specifico — serve quando lo si sta modificando nel form,
+   per calcolare quanto resta da coprire senza contare la sua versione precedente. */
+const RIMBORSO_EPS = 0.005;
+function rimborsoQuotaPer(rimborso, uscitaId){
+  if(!rimborso || !rimborso.rimborsoSpesa || !rimborso.entrate || !Array.isArray(rimborso.rimborsoDiIds)) return 0;
+  if(!rimborso.rimborsoDiIds.includes(uscitaId)) return 0;
+  const spese = rimborso.rimborsoDiIds.map(id=>DB.movimenti.find(m=>m.id===id)).filter(Boolean);
+  const totSpese = spese.reduce((s,m)=>s+(m.uscite||0),0);
+  const target = spese.find(m=>m.id===uscitaId);
+  if(!target || totSpese<=0) return 0;
+  return rimborso.entrate * ((target.uscite||0)/totSpese);
+}
+function rimborsoCoperturaFor(uscitaId, excludeId){
+  const spesa = DB.movimenti.find(m=>m.id===uscitaId);
+  const totale = spesa ? (spesa.uscite||0) : 0;
+  let recuperato = 0, count = 0;
+  DB.movimenti.forEach(r=>{
+    if(r.id===excludeId) return;
+    const q = rimborsoQuotaPer(r, uscitaId);
+    if(q>0){ recuperato += q; count++; }
+  });
+  const mancante = Math.max(0, totale - recuperato);
+  return { totale, recuperato, mancante, count, completo: totale>0 && mancante<RIMBORSO_EPS };
+}
+/* Etichetta puramente visiva (nessun effetto sui totali, gestiti dal netting in movimentiForTotals):
+   la spesa riceve "Rimborsato" solo quando i rimborsi collegati la coprono per intero; con copertura
+   parziale l'etichetta non c'è e al suo posto compare l'icona di stato (vedi rimborsoParzialeIconHtml). */
+function syncRimborsatoTag(uscitaId){
+  if(!uscitaId) return;
   const target = DB.movimenti.find(m=>m.id===uscitaId);
   if(!target) return;
-  target.etichette = target.etichette || [];
-  if(!target.etichette.includes('Rimborsato')) target.etichette.push('Rimborsato');
-  if(!DB.etichette.includes('Rimborsato')) DB.etichette.push('Rimborsato');
+  if(rimborsoCoperturaFor(uscitaId).completo){
+    target.etichette = target.etichette || [];
+    if(!target.etichette.includes('Rimborsato')) target.etichette.push('Rimborsato');
+    if(!DB.etichette.includes('Rimborsato')) DB.etichette.push('Rimborsato');
+  } else if(Array.isArray(target.etichette)){
+    target.etichette = target.etichette.filter(t=>t!=='Rimborsato');
+  }
 }
-function removeRimborsatoTagIfUnused(uscitaId){
-  if(!uscitaId) return;
-  const stillUsed = DB.movimenti.some(m=>Array.isArray(m.rimborsoDiIds) && m.rimborsoDiIds.includes(uscitaId));
-  if(stillUsed) return;
-  const target = DB.movimenti.find(m=>m.id===uscitaId);
-  if(target && Array.isArray(target.etichette)) target.etichette = target.etichette.filter(t=>t!=='Rimborsato');
+// Importo ancora da coprire su un insieme di spese collegate (somma dei "mancante" di ciascuna).
+function rimborsoResiduoSpese(ids, excludeId){
+  return (ids||[]).reduce((s,id)=>s + rimborsoCoperturaFor(id, excludeId).mancante, 0);
+}
+// Nomi storici mantenuti come alias, per compatibilità con eventuali altri punti che li richiamano.
+const applyRimborsatoTag = syncRimborsatoTag;
+const removeRimborsatoTagIfUnused = syncRimborsatoTag;
+/* Icona di stato discreta su una spesa coperta solo in parte da uno o più rimborsi: sparisce da sola
+   quando la copertura raggiunge l'intero importo. Hover (desktop) mostra il tooltip, click (anche
+   mobile) mostra la bolla con il dettaglio — gestito dal listener delegato in init(). */
+function rimborsoParzialeIconHtml(m){
+  if(!m || !m.uscite) return '';
+  const c = rimborsoCoperturaFor(m.id);
+  if(!c.count || c.completo) return '';
+  const msg = `Recuperati ${fmtNum(c.recuperato)} € su ${fmtNum(c.totale)} € · mancano ${fmtNum(c.mancante)} €`;
+  return `<button type="button" class="rimb-parz-btn" data-tip="${esc(msg)}" aria-label="${esc(msg)}">${ico('pieChart',12)}</button>`;
 }
 /* ==================== TASTIERINO IMPORTO (mobile) ====================
    Sostituisce la tastiera di sistema per il campo Importo del form Movimento con un tastierino
@@ -5482,11 +5542,14 @@ function setupImportoKeypad(){
   });
 }
 
-function openMovModal(id, onSaved, duplicateFrom){
+function openMovModal(id, onSaved, duplicateFrom, preset){
   const editing = id ? DB.movimenti.find(m=>m.id===id) : null;
   // duplicateFrom: movimento sorgente quando si duplica un movimento esistente — precompila i campi
   // come per una modifica, ma il salvataggio crea un NUOVO movimento (editing resta null).
-  const prefill = editing || duplicateFrom || null;
+  // preset: {tipo, data, importo} — usato per l'eccedenza di un rimborso: precompila solo tipo,
+  // data e importo, lasciando categoria/dettaglio/metodo ai valori di default.
+  const prefill = editing || duplicateFrom || (preset ? { entrate: preset.tipo==='entrata' ? preset.importo : null, uscite: preset.tipo==='uscita' ? preset.importo : null } : null);
+  const dataIniziale = editing ? editing.data : (preset && preset.data) || new Date().toISOString().slice(0,10);
   const tipo = prefill ? (prefill.entrate ? 'entrata':'uscita') : 'uscita';
   const html = `
     <div class="modal-head"><h3>${editing?'Modifica movimento':'Nuovo movimento'}</h3><button class="close-x" id="mClose">${ico('x')}</button></div>
@@ -5501,7 +5564,7 @@ function openMovModal(id, onSaved, duplicateFrom){
           ${ico('rotateCcw',13)} Rimborso
         </label>
       </div>
-      <div class="slim-row"><span class="slim-icon">${ico('calendar',14)}</span><div class="slim-main field"><label>Data</label><input type="date" id="mData" value="${editing?editing.data:new Date().toISOString().slice(0,10)}"></div>
+      <div class="slim-row"><span class="slim-icon">${ico('calendar',14)}</span><div class="slim-main field"><label>Data</label><input type="date" id="mData" value="${dataIniziale}"></div>
         <div class="date-quick-chips">
           <button type="button" class="date-quick-chip" id="mDataOggi">Oggi</button>
           <button type="button" class="date-quick-chip" id="mDataIeri">Ieri</button>
@@ -5590,15 +5653,28 @@ function openMovModal(id, onSaved, duplicateFrom){
     if(!(curTipo==='entrata' && curIsRimborso) || !linkedIds.length || isNaN(importo)){
       box.style.display = 'none'; box.innerHTML = ''; return;
     }
-    const sum = linkedIds.reduce((s,id)=>{ const m = DB.movimenti.find(x=>x.id===id); return s + (m?m.uscite||0:0); }, 0);
+    // "Da coprire" = quanto resta delle spese collegate, al netto di eventuali altri rimborsi già
+    // registrati su di esse (es. rate precedenti); il rimborso in modifica non conta se stesso.
+    const sum = rimborsoResiduoSpese(linkedIds, editing ? editing.id : null);
     const diff = importo - sum;
-    if(Math.abs(diff)<0.005){ box.style.display = 'none'; box.innerHTML = ''; return; }
-    const verbo = diff>0 ? 'in più' : 'in meno';
+    if(Math.abs(diff)<RIMBORSO_EPS){ box.style.display = 'none'; box.innerHTML = ''; return; }
     box.style.display = '';
-    box.innerHTML = `<div class="rimborso-mismatch">
-      <span class="ic">${ico('alertTriangle',16)}</span>
-      <span>Le spese collegate sommano <b>${fmtEUR(sum)}</b>, ma l'importo è <b>${fmtEUR(importo)}</b> — <b>${fmtEUR(Math.abs(diff))} ${verbo}</b>.</span>
-    </div>`;
+    if(sum<RIMBORSO_EPS){
+      box.innerHTML = `<div class="rimborso-mismatch">
+        <span class="ic">${ico('alertTriangle',16)}</span>
+        <span>Le spese collegate risultano <b>già rimborsate per intero</b>: scollega le spese o registra l'importo come normale entrata.</span>
+      </div>`;
+      return;
+    }
+    box.innerHTML = diff>0
+      ? `<div class="rimborso-mismatch">
+          <span class="ic">${ico('alertTriangle',16)}</span>
+          <span>Le spese collegate da coprire sommano <b>${fmtEUR(sum)}</b>, ma l'importo è <b>${fmtEUR(importo)}</b>. Al salvataggio il rimborso verrà registrato per <b>${fmtEUR(sum)}</b> e l'eccedenza di <b>${fmtEUR(diff)}</b> si aprirà subito in una nuova entrata separata, da classificare a parte.</span>
+        </div>`
+      : `<div class="rimborso-mismatch">
+          <span class="ic">${ico('alertTriangle',16)}</span>
+          <span>Le spese collegate da coprire sommano <b>${fmtEUR(sum)}</b>, ma l'importo è <b>${fmtEUR(importo)}</b>: è un <b>rimborso parziale</b>. La spesa resta invariata e mostrerà un'icona con quanto recuperato finora — mancano <b>${fmtEUR(Math.abs(diff))}</b>.</span>
+        </div>`;
   }
   // Righe "Collega alla spesa": una di default, con un "+" per collegare un unico rimborso a più
   // spese (es. un bonifico che copre più acquisti). rimborsoDiRows tiene l'id scelto per ogni riga
@@ -5728,7 +5804,7 @@ function openMovModal(id, onSaved, duplicateFrom){
       descSel = ((await customPrompt('Specifica la descrizione:')) || '').trim();
     }
     const importoRaw = document.getElementById('mImporto').value;
-    const importo = parseFloat(importoRaw);
+    let importo = parseFloat(importoRaw);
     const categoria = document.getElementById('mCategoria').value;
     const metodoPagamento = document.getElementById('mMetodoPagamento').value || 'Conto corrente';
     const note = document.getElementById('mNote').value.trim();
@@ -5751,6 +5827,24 @@ function openMovModal(id, onSaved, duplicateFrom){
     mEtichette.forEach(t=>{ if(!DB.etichette.includes(t)) DB.etichette.push(t); });
     const rimborsoSpesa = curTipo==='entrata' && curIsRimborso;
     const rimborsoDiIds = rimborsoSpesa ? rimborsoDiRows.filter(Boolean) : [];
+    // Eccedenza automatica: se il rimborso supera quanto resta da coprire sulle spese collegate,
+    // viene registrato per l'importo esatto che le copre e la differenza si scorpora in una nuova
+    // entrata separata, aperta subito dopo il salvataggio (stessa data, importo precompilato).
+    let eccedenza = 0;
+    if(rimborsoSpesa && rimborsoDiIds.length){
+      const daCoprire = rimborsoResiduoSpese(rimborsoDiIds, editing ? editing.id : null);
+      if(daCoprire<RIMBORSO_EPS){ toast('Le spese collegate risultano già rimborsate per intero'); return; }
+      if(importo - daCoprire >= RIMBORSO_EPS){
+        eccedenza = Math.round((importo - daCoprire)*100)/100;
+        importo = Math.round(daCoprire*100)/100;
+      }
+    }
+    const apriEccedenza = ()=>{
+      // Riapre il form direttamente sopra quello corrente (senza closeModal, che su mobile svuota
+      // il contenitore con un ritardo e cancellerebbe il nuovo form appena aperto).
+      openMovModal(null, onSaved, null, { tipo:'entrata', data, importo: eccedenza });
+      toast(`Eccedenza di ${eccedenza.toLocaleString('it-IT',{style:'currency',currency:'EUR'})} da classificare come nuova entrata`);
+    };
     if(editing){
       const oldRimborsoDiIds = Array.isArray(editing.rimborsoDiIds) ? editing.rimborsoDiIds.slice() : [];
       editing.data = data; editing.categoria = categoria; editing.descrizione = descSel || null;
@@ -5763,10 +5857,10 @@ function openMovModal(id, onSaved, duplicateFrom){
       editing.fornitore = fornitore;
       editing.rimborsoSpesa = rimborsoSpesa || undefined;
       editing.rimborsoDiIds = rimborsoDiIds.length ? rimborsoDiIds : undefined;
-      oldRimborsoDiIds.filter(id=>!rimborsoDiIds.includes(id)).forEach(removeRimborsatoTagIfUnused);
-      rimborsoDiIds.forEach(applyRimborsatoTag);
+      new Set([...oldRimborsoDiIds, ...rimborsoDiIds]).forEach(syncRimborsatoTag);
       if(fornitore) registraFornitoreSeNuovo(descSel, fornitore, data);
       if(movExpandedYears) movExpandedYears.add(data.slice(0,4));
+      if(eccedenza>0){ saveDB(); (onSaved || renderCurrentView)(); apriEccedenza(); return; }
       saveDB(); closeModal(); toastSuccess('Movimento salvato'); (onSaved || renderCurrentView)();
       return;
     }
@@ -5776,9 +5870,10 @@ function openMovModal(id, onSaved, duplicateFrom){
     // rimborsi diversi alla stessa spesa).
     const newMov = { id:uid('m'), data, categoria, descrizione:descSel||null, entrate: curTipo==='entrata'?importo:null, uscite: curTipo==='uscita'?importo:null, note: note||null, etichette: mEtichette, metodoPagamento, consumo, fornitore, rimborsoSpesa: rimborsoSpesa||undefined, rimborsoDiIds: rimborsoDiIds.length ? rimborsoDiIds : undefined };
     DB.movimenti.push(newMov);
-    rimborsoDiIds.forEach(applyRimborsatoTag);
+    rimborsoDiIds.forEach(syncRimborsatoTag);
     if(fornitore) registraFornitoreSeNuovo(descSel, fornitore, data);
     if(movExpandedYears) movExpandedYears.add(data.slice(0,4));
+    if(eccedenza>0){ saveDB(); (onSaved || renderCurrentView)(); apriEccedenza(); return; }
     saveDB(); toastSuccess('Movimento salvato'); (onSaved || renderCurrentView)();
     document.getElementById('mImporto')._importoKeypadReset ? document.getElementById('mImporto')._importoKeypadReset() : (document.getElementById('mImporto').value = '');
     document.getElementById('mNote').value = '';
@@ -11997,6 +12092,15 @@ advanceAutoRenewals();
   // Click delegato per l'icona "vai alla spesa collegata" (compare su qualunque tabella di
   // movimenti in tutta l'app, non solo nella scheda Movimenti principale). Se il rimborso copre
   // più spese, invece di saltare direttamente apre un piccolo popup con l'elenco da scegliere.
+  // Click delegato per l'icona di rimborso parziale: mostra la bolla con quanto recuperato/mancante
+  // (sul mobile non esiste l'hover, quindi il tooltip CSS non basta).
+  document.addEventListener('click', (e)=>{
+    const ic = e.target.closest('.rimb-parz-btn');
+    if(!ic) return;
+    e.stopPropagation();
+    const r = ic.getBoundingClientRect();
+    showChartValueBubble(ic.dataset.tip, r.left + r.width/2, r.top);
+  });
   document.addEventListener('click', (e)=>{
     const btn = e.target.closest('.mov-link-btn');
     if(!btn) return;
